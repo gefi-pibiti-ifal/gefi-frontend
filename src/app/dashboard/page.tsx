@@ -17,6 +17,7 @@ export default function DashboardPage() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [conversationId, setConversationId] = useState<string | null>(null);
 
   // Auto-scroll para última mensagem
   useEffect(() => {
@@ -27,18 +28,30 @@ export default function DashboardPage() {
     try {
       setIsLoading(true);
 
-      // Adicionar mensagem do usuário
+      // Adicionar mensagem do usuário na tela
       const userMessage: ChatMessageType = {
         id: Date.now().toString(),
         user_query: query,
         ai_response: '',
         created_at: new Date().toISOString(),
       };
-
       setMessages((prev) => [...prev, userMessage]);
 
-      // Simular resposta da IA (substituir pela chamada real à API)
+      let currentId = conversationId;
+
+      // Se não temos uma conversa ativa, criamos uma nova no banco primeiro!
+      if (!currentId) {
+        // Altere a rota '/chat/conversation' abaixo se o seu backend usar outro caminho para criar conversas
+        const convResponse = await api.post('/chat/conversations', {
+          title: query.substring(0, 30) + '...', // Usa o início da pergunta como título
+        });
+        currentId = convResponse.data.id;
+        setConversationId(currentId);
+      }
+
+      // Agora enviamos a pergunta COM o conversation_id exigido pelo backend
       const response = await api.post('/chat/ask', {
+        conversation_id: currentId, // 👈 Aqui está a correção!
         query,
       });
 
@@ -49,9 +62,9 @@ export default function DashboardPage() {
         created_at: new Date().toISOString(),
         sources: response.data.sources,
       };
-
       setMessages((prev) => [...prev, newMessage]);
     } catch (error) {
+      console.error(error);
       toast.error('Erro ao enviar mensagem');
     } finally {
       setIsLoading(false);

@@ -5,11 +5,12 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { Eye, EyeOff } from 'lucide-react';
-import api from '@/lib/api';
-import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
 
 export function LoginForm() {
   const router = useRouter();
+  const { login } = useAuth();
+  
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -42,21 +43,10 @@ export function LoginForm() {
 
     try {
       setIsLoading(true);
-      const response = await api.post('/auth/login', {
-        email,
-        password,
-      });
-
-      const { access_token, user } = response.data;
-
-      localStorage.setItem('auth_token', access_token);
-      localStorage.setItem('user', JSON.stringify(user));
-
-      toast.success('Login realizado com sucesso!');
+      await login(email, password);
       router.push('/dashboard');
-    } catch (error: any) {
-      const message = error.response?.data?.message || 'Erro ao fazer login';
-      toast.error(message);
+    } catch (error) {
+      console.error(error);
     } finally {
       setIsLoading(false);
     }
