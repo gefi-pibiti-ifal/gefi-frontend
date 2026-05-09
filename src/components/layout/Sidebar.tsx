@@ -63,8 +63,7 @@ export function Sidebar() {
   };
 
   return (
-    <aside className="w-full md:w-72 bg-sidebar-dark text-white flex flex-col h-full shrink-0">
-      {/* 1. Logo (FIXO) */}
+    <aside className="w-full md:w-72 bg-sidebar-dark text-white flex flex-col h-full shrink-0 border-r border-gray-200">
       <div className="p-6 border-b border-white/10 shrink-0">
         <Link href="/dashboard" className="flex items-center gap-2 hover:opacity-80 transition">
           <div className="text-2xl font-bold">
@@ -109,7 +108,7 @@ export function Sidebar() {
         As Suas Conversas
       </div>
 
-      {/* 3. Lista de Conversas (SCROLLÁVEL e com novo scrollbar) */}
+      {/* 3. Lista de Conversas (SCROLLÁVEL com scroll discreto) */}
       <div className="flex-1 px-4 pb-4 space-y-1 overflow-y-auto scrollbar-discreta">
         {conversations.length === 0 ? (
           <p className="text-sm text-white/40 px-2 italic">Nenhuma conversa guardada.</p>

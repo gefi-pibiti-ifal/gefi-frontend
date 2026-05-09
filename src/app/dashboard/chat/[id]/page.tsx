@@ -78,7 +78,7 @@ export default function ChatDetailsPage() {
       <DashboardLayout>
         <div className="flex flex-col h-screen bg-white">
           <div className="flex items-center justify-between p-6 border-b border-border-light bg-white">
-            <h1 className="text-2xl font-bold text-text-dark">Conversa Antiga</h1>
+            <h1 className="text-2xl font-bold text-text-dark">GeFi</h1>
             <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
               <Bell size={24} className="text-text-dark" />
             </button>

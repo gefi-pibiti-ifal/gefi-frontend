@@ -79,12 +79,12 @@ export default function DashboardPage() {
   return (
     <PrivateRoute>
       <DashboardLayout>
-        <div className="flex flex-col h-screen bg-white">
-          {/* Header */}
-          <div className="flex items-center justify-between p-6 border-b border-border-light bg-white">
+        <div className="flex flex-col h-full bg-white relative overflow-hidden">
+          {/* Header (Fixo no topo) */}
+          <div className="flex items-center justify-between p-6 border-b border-gray-200 shadow-sm bg-white z-10">
             <div>
-              <h1 className="text-2xl font-bold text-text-dark">
-                Olá, <span className="text-primary">{user?.full_name || 'Fiscal'}</span>! Vamos resolver pendências hoje?
+              <h1 className="text-xl font-bold text-text-dark">
+                GE<span className="text-primary">FI</span> Assistente
               </h1>
             </div>
             <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
@@ -92,21 +92,53 @@ export default function DashboardPage() {
             </button>
           </div>
 
-          {/* Chat Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-4">
+          {/* Área Principal (Dinâmica) */}
+          <div 
+            className={`flex-1 overflow-y-auto p-6 transition-all duration-700 ease-in-out ${
+              // 'justify-center' garante a centralização vertical perfeita
+              messages.length === 0 ? 'flex flex-col items-center justify-center' : 'space-y-4'
+            }`}
+          >
             {messages.length === 0 ? (
-              <SuggestedQuestions
-                onSelectQuestion={handleSendMessage}
-                isLoading={isLoading}
-              />
+              /* --- MODO INICIAL: CENTRALIZADO --- */
+              /** * Adicionamos um '-mt-20' (margem negativa no topo) para compensar o peso 
+               * visual do cabeçalho e deixar o chat no "centro ótico" da tela.
+               */
+              <div className="w-full max-w-3xl flex flex-col space-y-8 animate-in fade-in zoom-in-95 duration-500 mx-auto -mt-20">
+                
+                {/* Ícone e Saudação na mesma linha */}
+                <div className="flex items-center gap-4 w-full">
+                  <div className="w-12 h-12 md:w-14 md:h-14 rounded-full bg-sidebar-dark flex items-center justify-center shrink-0 shadow-md">
+                    <span className="text-2xl md:text-3xl">🤓</span>
+                  </div>
+                  <h2 className="text-2xl md:text-3xl font-bold text-text-dark leading-tight">
+                    Olá! Sou o GeFi. Como posso ajudar hoje, <span className="text-primary">{user?.full_name?.split(' ')[0] || 'Fiscal'}</span>?
+                  </h2>
+                </div>
+
+                {/* Input Centralizado */}
+                <div className="w-full shadow-lg rounded-xl">
+                  <ChatInput 
+                    onSend={handleSendMessage} 
+                    disabled={isLoading} 
+                    placeholder="Faça uma pergunta sobre normativos, prazos, fiscalização..." 
+                  />
+                </div>
+
+                {/* Sugestões */}
+                <div className="w-full">
+                  <SuggestedQuestions
+                    onSelectQuestion={handleSendMessage}
+                    isLoading={isLoading}
+                  />
+                </div>
+
+              </div>
             ) : (
-              <>
+              <div className="animate-in fade-in duration-500 space-y-4">
                 {messages.map((msg) => (
                   <div key={msg.id}>
-                    {/* Renderiza sempre a pergunta do usuário */}
                     <ChatMessage isUser={true} content={msg.user_query} />
-                    
-                    {/* Renderiza o balão da IA APENAS se a resposta não estiver vazia */}
                     {msg.ai_response && (
                       <ChatMessage
                         isUser={false}
@@ -117,26 +149,28 @@ export default function DashboardPage() {
                     )}
                   </div>
                 ))}
-              </>
-            )}
-
-            {/* Indicador de carregamento enquanto a IA pensa */}
-            {isLoading && (
-              <div className="flex justify-start">
-                <div className="flex items-center gap-2 p-4">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  <span className="text-sm text-text-light">Processando...</span>
-                </div>
+                
+                {isLoading && (
+                  <div className="flex justify-start">
+                    <div className="flex items-center gap-2 p-4">
+                      <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                      <span className="text-sm text-text-light">Pesquisando documentos...</span>
+                    </div>
+                  </div>
+                )}
+                <div ref={messagesEndRef} />
               </div>
             )}
-
-            <div ref={messagesEndRef} />
           </div>
 
-          {/* Input Area */}
-          <div className="p-6 border-t border-border-light bg-white">
-            <ChatInput onSend={handleSendMessage} disabled={isLoading} />
-          </div>
+          {/* --- MODO CHAT: INPUT FIXO NO RODAPÉ --- */}
+          {/* Este bloco só aparece quando há mensagens. Ele "desliza" de baixo para cima */}
+          {messages.length > 0 && (
+            <div className="p-6 border-t border-gray-200 bg-gray-50/50 animate-in slide-in-from-bottom-24 fade-in duration-500 z-10">
+              <ChatInput onSend={handleSendMessage} disabled={isLoading} />
+            </div>
+          )}
+          
         </div>
       </DashboardLayout>
     </PrivateRoute>
