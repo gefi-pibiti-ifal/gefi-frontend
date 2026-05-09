@@ -7,7 +7,7 @@ import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
 import { SuggestedQuestions } from '@/components/chat/SuggestedQuestions';
 import { Loader2, Bell } from 'lucide-react';
-import { Conversation, ChatMessage as ChatMessageType } from '@/types';
+import { ChatMessage as ChatMessageType } from '@/types';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
@@ -19,7 +19,7 @@ export default function DashboardPage() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [conversationId, setConversationId] = useState<string | null>(null);
 
-  // Auto-scroll para última mensagem
+  // Auto-scroll para a última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
@@ -28,9 +28,11 @@ export default function DashboardPage() {
     try {
       setIsLoading(true);
 
-      // Adicionar mensagem do usuário na tela
+      const tempId = Date.now().toString();
+
+      // Adiciona a mensagem do usuário imediatamente com a resposta da IA vazia
       const userMessage: ChatMessageType = {
-        id: Date.now().toString(),
+        id: tempId,
         user_query: query,
         ai_response: '',
         created_at: new Date().toISOString(),
@@ -39,30 +41,33 @@ export default function DashboardPage() {
 
       let currentId = conversationId;
 
-      // Se não temos uma conversa ativa, criamos uma nova no banco primeiro!
+      // Cria a conversa no banco se for a primeira pergunta
       if (!currentId) {
-        // Altere a rota '/chat/conversation' abaixo se o seu backend usar outro caminho para criar conversas
         const convResponse = await api.post('/chat/conversations', {
-          title: query.substring(0, 30) + '...', // Usa o início da pergunta como título
+          title: query.substring(0, 30) + '...',
         });
         currentId = convResponse.data.id;
         setConversationId(currentId);
       }
 
-      // Agora enviamos a pergunta COM o conversation_id exigido pelo backend
+      // Envia a requisição para o LLM
       const response = await api.post('/chat/ask', {
-        conversation_id: currentId, // 👈 Aqui está a correção!
+        conversation_id: currentId,
         query,
       });
 
-      const newMessage: ChatMessageType = {
-        id: (Date.now() + 1).toString(),
-        user_query: query,
-        ai_response: response.data.response || 'Resposta da IA',
-        created_at: new Date().toISOString(),
-        sources: response.data.sources,
-      };
-      setMessages((prev) => [...prev, newMessage]);
+      // Atualiza a mensagem temporária com a resposta real da IA
+      setMessages((prev) =>
+        prev.map((msg) =>
+          msg.id === tempId
+            ? {
+                ...msg,
+                ai_response: response.data.response || 'Resposta da IA',
+                sources: response.data.sources,
+              }
+            : msg
+        )
+      );
     } catch (error) {
       console.error(error);
       toast.error('Erro ao enviar mensagem');
@@ -98,18 +103,24 @@ export default function DashboardPage() {
               <>
                 {messages.map((msg) => (
                   <div key={msg.id}>
+                    {/* Renderiza sempre a pergunta do usuário */}
                     <ChatMessage isUser={true} content={msg.user_query} />
-                    <ChatMessage
-                      isUser={false}
-                      content={msg.ai_response}
-                      sources={msg.sources}
-                      timestamp={msg.created_at}
-                    />
+                    
+                    {/* Renderiza o balão da IA APENAS se a resposta não estiver vazia */}
+                    {msg.ai_response && (
+                      <ChatMessage
+                        isUser={false}
+                        content={msg.ai_response}
+                        sources={msg.sources}
+                        timestamp={msg.created_at}
+                      />
+                    )}
                   </div>
                 ))}
               </>
             )}
 
+            {/* Indicador de carregamento enquanto a IA pensa */}
             {isLoading && (
               <div className="flex justify-start">
                 <div className="flex items-center gap-2 p-4">
