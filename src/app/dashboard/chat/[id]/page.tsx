@@ -52,30 +52,24 @@ function ChatContent() {
     }
   }, [conversationId]);
 
-  // 3. Capturar a pergunta que vem do "Novo Chat" (Redirecionamento)
   useEffect(() => {
     const initialQuery = searchParams.get('q');
     
-    // Só envia se houver pergunta na URL, se ainda não estiver carregando o histórico, e se não tiver enviado antes
     if (initialQuery && !isFetchingHistory && !hasSentInitial.current) {
       hasSentInitial.current = true;
       
-      // Limpa a URL para ficar elegante (remove o ?q=...)
       router.replace(`/dashboard/chat/${conversationId}`);
       
-      // Dispara a mensagem!
       handleSendMessage(initialQuery);
     }
   }, [searchParams, isFetchingHistory, conversationId, router]);
 
-  // 4. Função principal de enviar mensagem
   const handleSendMessage = async (query: string) => {
     const tempId = Date.now().toString(); 
     
     try {
       setIsLoading(true);
 
-      // Adiciona imediatamente na tela
       const userMessage: ChatMessageType = {
         id: tempId,
         user_query: query,
@@ -84,13 +78,11 @@ function ChatContent() {
       };
       setMessages((prev) => [...prev, userMessage]);
 
-      // Pede a resposta à IA
       const response = await api.post('/chat/ask', {
         conversation_id: conversationId,
         query,
       });
 
-      // Atualiza o balão vazio com a resposta
       setMessages((prev) =>
         prev.map((msg) =>
           msg.id === tempId

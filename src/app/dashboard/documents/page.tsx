@@ -71,25 +71,27 @@ export default function DocumentsPage() {
   return (
     <PrivateRoute>
       <DashboardLayout>
-        <div className="space-y-6">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Documentos Normativos</h1>
-            <p className="text-gray-600 mt-2">
-              Faça upload de documentos para indexação no sistema RAG
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-1">
-              <DocumentUploadForm onUpload={handleUpload} isLoading={isLoading} />
+        <div className="h-full overflow-y-auto p-6 lg:p-10">
+          <div className="max-w-7xl mx-auto w-full space-y-6">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Documentos Normativos</h1>
+              <p className="text-gray-600 mt-2">
+                Faça upload de documentos para indexação no sistema RAG
+              </p>
             </div>
 
-            <div className="lg:col-span-2">
-              <DocumentList
-                documents={documents}
-                onDelete={handleDelete}
-                isLoading={isLoadingList}
-              />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              <div className="lg:col-span-1">
+                <DocumentUploadForm onUpload={handleUpload} isLoading={isLoading} />
+              </div>
+
+              <div className="lg:col-span-2">
+                <DocumentList
+                  documents={documents}
+                  onDelete={handleDelete}
+                  isLoading={isLoadingList}
+                />
+              </div>
             </div>
           </div>
         </div>
