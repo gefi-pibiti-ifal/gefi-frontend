@@ -8,15 +8,9 @@ export default function LoginPage() {
         <div className="text-center space-y-8">
           {/* Logo IFAL */}
           <div className="flex flex-col items-center gap-2">
-            <div className="w-16 h-16 bg-white/20 rounded-lg flex items-center justify-center">
-              <div className="text-2xl font-bold text-white">■ ■</div>
-            </div>
-            <p className="text-xs font-semibold">INSTITUTO</p>
-            <p className="text-xs font-semibold">FEDERAL</p>
-            <p className="text-xs">Alagoas</p>
+            <img src="/logo_ifal.svg" alt="Nenhum documento encontrado" className="w-28 h-32" />  
           </div>
-
-          {/* Logo GEFI */}
+          
           <div className="space-y-2">
             <div className="text-5xl font-bold">
               <span className="text-white">GE</span>
