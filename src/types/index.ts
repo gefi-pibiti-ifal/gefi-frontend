@@ -8,7 +8,7 @@ export interface User {
   id: string;
   full_name: string;
   email: string;
-  user_type: 'fiscal' | 'admin' | 'viewer';
+  user_type: 'FISCAL' | 'ADMINISTRADOR';
 }
 
 export interface AuthResponse {
@@ -26,7 +26,7 @@ export interface RegisterPayload {
   email: string;
   password: string;
   siap_registration: string;
-  user_type: 'FISCAL' | 'ADMIN' | 'VIEWER' | 'fiscal' | 'admin' | 'viewer';
+  user_type: 'FISCAL' | 'ADMINISTRADOR'
 }
 
 export interface AuthContextType {
@@ -69,10 +69,19 @@ export interface AskPayload {
 }
 
 // ============ Document Types ============
+
+export enum DocumentType {
+  NORMATIVO = 'Normativo',
+  REGULAMENTO = 'Regulamento',
+  RESOLUCAO = 'Resolução',
+  INSTRUCAO = 'Instrução',
+  OUTRO = 'Outro',
+}
+
 export interface Document {
   id: string;
   title: string;
-  document_type: string;
+  document_type: DocumentType;
   created_at: string;
 }
 
@@ -87,6 +96,16 @@ export interface DocumentUploadResponse {
   title: string;
   document_type: string;
   created_at: string;
+}
+
+export interface PaginatedDocuments {
+  data: Document[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 // ============ API Error Types ============

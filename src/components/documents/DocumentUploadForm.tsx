@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/Input';
 import { Select } from '@/components/ui/Select';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Loader2, FileText } from 'lucide-react';
+import { DocumentType } from '@/types';
 
 interface DocumentUploadFormProps {
   onUpload: (title: string, documentType: string, file: File) => Promise<void>;
@@ -13,16 +14,16 @@ interface DocumentUploadFormProps {
 }
 
 const DOCUMENT_TYPES = [
-  { value: 'normativo', label: 'Normativo' },
-  { value: 'regulamento', label: 'Regulamento' },
-  { value: 'resolucao', label: 'Resolução' },
-  { value: 'instrucao', label: 'Instrução' },
-  { value: 'outro', label: 'Outro' },
+  { value: DocumentType.NORMATIVO, label: 'Normativo' },
+  { value: DocumentType.REGULAMENTO, label: 'Regulamento' },
+  { value: DocumentType.RESOLUCAO, label: 'Resolução' },
+  { value: DocumentType.INSTRUCAO, label: 'Instrução' },
+  { value: DocumentType.OUTRO, label: 'Outro' },
 ];
 
 export function DocumentUploadForm({ onUpload, isLoading = false }: DocumentUploadFormProps) {
   const [title, setTitle] = useState('');
-  const [documentType, setDocumentType] = useState('normativo');
+  const [documentType, setDocumentType] = useState<DocumentType>(DocumentType.NORMATIVO);
   const [file, setFile] = useState<File | null>(null);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
@@ -65,7 +66,7 @@ export function DocumentUploadForm({ onUpload, isLoading = false }: DocumentUplo
     try {
       await onUpload(title, documentType, file!);
       setTitle('');
-      setDocumentType('normativo');
+      setDocumentType(DocumentType.NORMATIVO);
       setFile(null);
       const fileInput = document.getElementById('file') as HTMLInputElement;
       if (fileInput) {
@@ -82,7 +83,7 @@ export function DocumentUploadForm({ onUpload, isLoading = false }: DocumentUplo
         <CardTitle>Upload de Documento</CardTitle>
         <CardDescription>Envie documentos normativos para indexação no RAG</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent >
         <form onSubmit={handleSubmit} className="space-y-4">
           <Input
             type="text"
@@ -101,7 +102,7 @@ export function DocumentUploadForm({ onUpload, isLoading = false }: DocumentUplo
 
           <Select
             value={documentType}
-            onChange={(e) => setDocumentType(e.target.value)}
+            onChange={(e) => setDocumentType(e.target.value as DocumentType)}
             disabled={isLoading}
             label="Tipo de Documento"
             options={DOCUMENT_TYPES}
