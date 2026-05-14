@@ -13,8 +13,8 @@ export function DashboardLayout({ children }: DashboardLayoutProps) {
       {/* Sidebar */}
       <Sidebar />
 
-      {/* Main Content: Ocupa o resto do espaço, mas respeita o limite do h-screen */}
-      <main className="flex-1 flex flex-col h-full overflow-hidden bg-white">
+      {/* Main Content */}
+      <main className="flex-1 overflow-auto m-2">
         {children}
       </main>
     </div>

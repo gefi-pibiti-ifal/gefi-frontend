@@ -16,14 +16,14 @@ export function Input({ label, error, className, ...props }: InputProps) {
         </label>
       )}
       <input
-        className={cn(
-          'w-full px-4 py-2 border border-border-light rounded-lg',
-          'text-text-dark placeholder-text-light',
-          'focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent',
-          'disabled:bg-gray-100 disabled:cursor-not-allowed',
-          error && 'border-red-500 focus:ring-red-500',
-          className
-        )}
+      className={cn(
+        'w-full px-4 py-2 border border-border-light rounded-lg transition-all',
+        'text-text-dark placeholder-text-light',    
+        'focus:outline-none focus:ring-2 focus:ring-inset focus:ring-primary focus:border-primary',
+        'disabled:bg-gray-100 disabled:cursor-not-allowed',
+        error && 'border-red-500 focus:ring-red-500',
+        className
+      )}
         {...props}
       />
       {error && (

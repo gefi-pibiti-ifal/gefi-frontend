@@ -28,13 +28,13 @@ export function DocumentList({ documents, onDelete, isLoading = false }: Documen
     }
   };
 
-  if (documents.length === 0) {
+  if (documents.length === 0 && !isLoading) {
     return (
       <Card>
         <CardContent className="pt-6">
-          <div className="text-center py-8">
-            <FileText className="w-12 h-12 mx-auto mb-4 text-gray-400 opacity-50" />
-            <p className="text-gray-600">Nenhum documento enviado ainda</p>
+          <div className="flex flex-col items-center justify-center py-12 w-full">
+            <img src="/empty-docs.svg" alt="Nenhum documento encontrado" className="w-166 h-110" />
+            <p className="text-gray-600">Nenhum documento encontrado</p>
           </div>
         </CardContent>
       </Card>
@@ -44,7 +44,7 @@ export function DocumentList({ documents, onDelete, isLoading = false }: Documen
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Documentos Enviados</CardTitle>
+        <CardTitle>Base de Conhecimento</CardTitle>
       </CardHeader>
       <CardContent>
         <div className="space-y-2">
