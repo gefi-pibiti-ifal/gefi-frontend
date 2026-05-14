@@ -23,7 +23,7 @@ export function ChatMessage({ isUser, content, sources, timestamp }: ChatMessage
   if (isUser) {
     return (
       <div className="flex justify-end mb-6 w-full max-w-4xl mx-auto px-4">
-        <div className="max-w-xl lg:max-w-2xl bg-message-user dark:bg-primary text-white rounded-2xl rounded-tr-sm p-5 shadow-md transition-colors duration-300">
+        <div className="max-w-xl lg:max-w-2xl bg-message-user text-white rounded-2xl rounded-tr-sm p-5 shadow-md">
           <p className="text-base">{content}</p>
         </div>
       </div>
@@ -34,22 +34,22 @@ export function ChatMessage({ isUser, content, sources, timestamp }: ChatMessage
     <div className="flex justify-start mb-10 w-full max-w-4xl mx-auto px-4">
       <div className="space-y-3 max-w-full">
         <div className="flex gap-4 max-w-full">
-          <div className="w-12 h-12 rounded-full bg-sidebar-dark dark:bg-gray-800 flex items-center justify-center flex-shrink-0 shadow-sm mt-1 border border-transparent dark:border-gray-700 transition-colors duration-300">
+          <div className="w-12 h-12 rounded-full bg-sidebar-dark flex items-center justify-center flex-shrink-0 shadow-sm mt-1 border border-transparent">
             <span className="text-2xl">🤓</span>
           </div>
           
-          <div className="bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 shadow-sm rounded-2xl rounded-tl-sm p-6 overflow-hidden transition-colors duration-300">
-            <div className="text-base text-text-dark dark:text-gray-100 leading-relaxed markdown-content">
+          <div className="bg-white border border-gray-300 shadow-sm rounded-2xl rounded-tl-sm p-6 overflow-hidden">
+            <div className="text-base text-text-dark leading-relaxed markdown-content">
               <ReactMarkdown
                 components={{
                   p: ({node, ...props}) => <p className="mb-4 last:mb-0" {...props} />,
-                  strong: ({node, ...props}) => <strong className="font-semibold text-black dark:text-white" {...props} />,
+                  strong: ({node, ...props}) => <strong className="font-semibold text-black" {...props} />,
                   ul: ({node, ...props}) => <ul className="list-disc ml-5 mb-4 space-y-2" {...props} />,
                   ol: ({node, ...props}) => <ol className="list-decimal ml-5 mb-4 space-y-2" {...props} />,
                   li: ({node, ...props}) => <li {...props} />,
-                  h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-3 mt-5 text-black dark:text-white" {...props} />,
-                  h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-3 mt-5 text-black dark:text-white" {...props} />,
-                  h3: ({node, ...props}) => <h3 className="text-base font-bold mb-2 mt-4 text-black dark:text-white" {...props} />,
+                  h1: ({node, ...props}) => <h1 className="text-xl font-bold mb-3 mt-5 text-black" {...props} />,
+                  h2: ({node, ...props}) => <h2 className="text-lg font-bold mb-3 mt-5 text-black" {...props} />,
+                  h3: ({node, ...props}) => <h3 className="text-base font-bold mb-2 mt-4 text-black" {...props} />,
                 }}
               >
                 {content}
@@ -61,20 +61,20 @@ export function ChatMessage({ isUser, content, sources, timestamp }: ChatMessage
         <div className="flex gap-2 ml-16">
           <button
             onClick={handleCopy}
-            className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors border border-transparent hover:border-gray-200 dark:hover:border-gray-600"
+            className="p-2 hover:bg-gray-100 rounded-lg transition-colors border border-transparent hover:border-gray-200"
             title="Copiar texto"
           >
             {copied ? (
               <Check size={18} className="text-primary" />
             ) : (
-              <Copy size={18} className="text-text-light dark:text-gray-400" />
+              <Copy size={18} className="text-text-light" />
             )}
           </button>
         </div>
 
         {sources && sources.length > 0 && (
-          <div className="ml-16 space-y-2 mt-2 bg-gray-50 dark:bg-gray-800/50 p-4 rounded-xl border border-gray-200 dark:border-gray-700 inline-block transition-colors duration-300">
-            <p className="text-sm font-semibold text-text-dark dark:text-gray-300">Documentos Consultados:</p>
+          <div className="ml-16 space-y-2 mt-2 bg-gray-50 p-4 rounded-xl border border-gray-200 inline-block">
+            <p className="text-sm font-semibold text-text-dark">Documentos Consultados:</p>
             {sources.map((source, idx) => (
               <a
                 key={idx}
