@@ -29,14 +29,14 @@
     width: 6px;
   }
   .scrollbar-discreta::-webkit-scrollbar-track {
-    background: transparent; /* Remove o fundo branco */
+    background: transparent;
   }
   .scrollbar-discreta::-webkit-scrollbar-thumb {
     background-color: #4b5563; /* Cinza discreto */
     border-radius: 10px;
   }
   .scrollbar-discreta::-webkit-scrollbar-thumb:hover {
-    background-color: #6b7280; /* Cinza mais claro ao passar o mouse */
+    background-color: #6b7280;
   }
 
   .scrollbar-discreta {
