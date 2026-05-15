@@ -44,6 +44,7 @@ export interface Conversation {
   id: string;
   title: string;
   created_at: string;
+  is_pinned?: boolean;
 }
 
 export interface ChatMessage {
@@ -51,7 +52,7 @@ export interface ChatMessage {
   user_query: string;
   ai_response: string;
   created_at: string;
-  sources?: Array<{ title: string; url: string }>;
+  sources?: Array<{ id: string; title: string }>;
 }
 
 export interface ChatResponse {

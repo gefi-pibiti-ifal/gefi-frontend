@@ -15,58 +15,64 @@ function ChatContent() {
   const params = useParams();
   const router = useRouter();
   const searchParams = useSearchParams();
-  
+
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingHistory, setIsFetchingHistory] = useState(true);
-  
+
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasSentInitial = useRef(false);
 
-  const conversationId = params.id as string;
+  const conversationId = (params.id as string) ?? '';
 
-  // 1. Auto-scroll para a última mensagem
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages]);
 
-  // 2. Carregar o histórico da conversa ao abrir a página
   useEffect(() => {
+    let isMounted = true; 
+
     const fetchHistory = async () => {
       try {
         const response = await api.get(`/chat/conversations/${conversationId}`);
-        // Se o backend retornar o interactionHistory, colocamos na tela
-        if (response.data && response.data.interactionHistory) {
+        if (isMounted && response.data?.interactionHistory) {
           setMessages(response.data.interactionHistory);
         }
       } catch (error) {
-        console.error('Erro ao buscar histórico:', error);
-        toast.error('Não foi possível carregar a conversa.');
+        if (isMounted) {
+          console.error(error);
+          toast.error('Não foi possível carregar a conversa.');
+        }
       } finally {
-        setIsFetchingHistory(false);
+        if (isMounted) {
+          setIsFetchingHistory(false);
+        }
       }
     };
 
     if (conversationId) {
       fetchHistory();
     }
+
+    return () => {
+      isMounted = false; 
+    };
   }, [conversationId]);
 
   useEffect(() => {
-    const initialQuery = searchParams.get('q');
-    
-    if (initialQuery && !isFetchingHistory && !hasSentInitial.current) {
-      hasSentInitial.current = true;
-      
-      router.replace(`/dashboard/chat/${conversationId}`);
-      
-      handleSendMessage(initialQuery);
-    }
-  }, [searchParams, isFetchingHistory, conversationId, router]);
+    if (isFetchingHistory || hasSentInitial.current) return;
 
-  const handleSendMessage = async (query: string) => {
-    const tempId = Date.now().toString(); 
-    
+    const initialQuery = searchParams.get('q');
+    if (!initialQuery) return;
+
+    hasSentInitial.current = true;
+    handleSendMessage(initialQuery, true);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isFetchingHistory, conversationId, searchParams]);
+
+  const handleSendMessage = async (query: string, isInitial = false) => {
+    const tempId = Date.now().toString();
+
     try {
       setIsLoading(true);
 
@@ -76,6 +82,7 @@ function ChatContent() {
         ai_response: '',
         created_at: new Date().toISOString(),
       };
+      
       setMessages((prev) => [...prev, userMessage]);
 
       const response = await api.post('/chat/ask', {
@@ -83,23 +90,42 @@ function ChatContent() {
         query,
       });
 
-      setMessages((prev) =>
-        prev.map((msg) =>
-          msg.id === tempId
-            ? {
-                ...msg,
-                ai_response: response.data.response || 'Resposta da IA',
-                sources: response.data.sources,
-              }
-            : msg
-        )
-      );
+      setMessages((prev) => {
+        const exists = prev.some((m) => m.id === tempId);
+        
+        if (exists) {
+          return prev.map((msg) =>
+            msg.id === tempId
+              ? {
+                  ...msg,
+                  id: response.data.id ?? tempId,
+                  ai_response: response.data.ai_response ?? response.data.response ?? '',
+                  sources: response.data.sources,
+                  created_at: response.data.created_at ?? msg.created_at,
+                }
+              : msg
+          );
+        }
+
+        return [
+          ...prev,
+          {
+            id: response.data.id ?? tempId,
+            user_query: query,
+            ai_response: response.data.ai_response ?? response.data.response ?? '',
+            sources: response.data.sources,
+            created_at: response.data.created_at,
+          },
+        ];
+      });
+
+      if (isInitial) {
+        router.replace(`/dashboard/chat/${conversationId}`);
+      }
     } catch (error) {
       console.error(error);
       toast.error('Erro ao enviar mensagem');
-      
-      // Remove a mensagem vazia se der erro
-      setMessages((prev) => prev.filter(msg => msg.id !== tempId));
+      setMessages((prev) => prev.filter((msg) => msg.id !== tempId));
     } finally {
       setIsLoading(false);
     }
@@ -107,7 +133,6 @@ function ChatContent() {
 
   return (
     <div className="flex flex-col h-full bg-white relative overflow-hidden">
-      {/* Header Fixo */}
       <div className="flex items-center justify-between p-6 border-b border-gray-200 shadow-sm bg-white z-10 shrink-0">
         <div>
           <h1 className="text-xl font-bold text-text-dark">
@@ -119,7 +144,6 @@ function ChatContent() {
         </button>
       </div>
 
-      {/* Área de Mensagens */}
       <div className="flex-1 overflow-y-auto p-6 transition-all duration-700 ease-in-out">
         {isFetchingHistory ? (
           <div className="flex items-center justify-center h-full">
@@ -127,42 +151,41 @@ function ChatContent() {
           </div>
         ) : (
           <div className="animate-in fade-in duration-500 space-y-4 pb-4">
-            {messages.length === 0 && !isLoading && !searchParams.get('q') ? (
+            {messages.length === 0 && !isLoading ? (
               <div className="text-center text-text-light mt-10">
                 Nenhuma mensagem nesta conversa ainda.
               </div>
             ) : (
-              messages.map((msg) => (
+              messages.map((msg, index) => (
                 <div key={msg.id}>
                   <ChatMessage isUser={true} content={msg.user_query} />
-                  {msg.ai_response && (
+                  
+                  {msg.ai_response ? (
                     <ChatMessage
                       isUser={false}
                       content={msg.ai_response}
                       sources={msg.sources}
                       timestamp={msg.created_at}
                     />
+                  ) : (
+                    isLoading && index === messages.length - 1 && (
+                      <div className="flex justify-start mb-10 w-full max-w-4xl mx-auto mt-2">
+                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl rounded-tl-sm border border-gray-100">
+                          <Loader2 className="w-5 h-5 animate-spin text-primary" />
+                          <span className="text-sm font-medium text-text-dark">O GeFi está a pensar...</span>
+                        </div>
+                      </div>
+                    )
                   )}
                 </div>
               ))
-            )}
-            
-            {isLoading && (
-              <div className="flex justify-start mb-10 w-full max-w-4xl mx-auto mt-6">
-                <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl rounded-tl-sm border border-gray-100">
-                  <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                  <span className="text-sm font-medium text-text-dark">O GeFi está a pensar...</span>
-                </div>
-              </div>
             )}
             <div ref={messagesEndRef} className="h-4" />
           </div>
         )}
       </div>
 
-      {/* Input de Chat Fixo no Rodapé */}
       <div className="p-6 border-t border-gray-200 bg-gray-50/50 z-10 shrink-0">
-        {/* Adicionámos esta div para criar o corredor central alinhado com as mensagens */}
         <div className="w-full max-w-4xl mx-auto">
           <ChatInput onSend={handleSendMessage} disabled={isLoading || isFetchingHistory} />
         </div>
