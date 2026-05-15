@@ -92,72 +92,73 @@ export default function DocumentsPage() {
   return (
     <PrivateRoute>
       <DashboardLayout>
-        <div className="space-y-6">
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Documentos Normativos</h1>
-              {!isReadOnly && (
-                <p className="text-gray-600 mt-2">
-                  Faça upload de documentos para indexação no sistema RAG
-                </p>
-              )}
-            </div>
-
-            <div className="relative w-full lg:max-w-2xl">
-              <Input
-                placeholder="Pesquisar por título de documento normativo..."
-                value={searchTerm}
-                onChange={(e) => {
-                  setSearchTerm(e.target.value);
-                  setCurrentPage(1);
-                }}
-                className="pl-12 h-12 text-lg shadow-sm"
-              />
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            </div>          
-
-          </div>
-          
-          <div className={isReadOnly ? "flex justify-center" : "grid grid-cols-1 lg:grid-cols-3 gap-6"}>
+        <div className="h-full overflow-y-auto p-6 lg:p-10">
+          <div className="max-w-5xl mx-auto w-full space-y-8">
             
-            
-            {!isReadOnly && (
-              <div className="lg:col-span-1">
-                <DocumentUploadForm onUpload={handleUpload} isLoading={isLoading} />
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+              <div className="flex-1">
+                <h1 className="text-3xl font-bold text-gray-900">Documentos Normativos</h1>
+                {!isReadOnly && (
+                  <p className="text-gray-600 mt-2">
+                    Faça upload de documentos para indexação no sistema RAG
+                  </p>
+                )}
               </div>
-            )}
 
-            <div className={isReadOnly ? "w-full max-w-4xl space-y-4" : "lg:col-span-2 space-y-4"}>
-              <DocumentList
-                documents={documents}
-                onDelete={!isReadOnly ? handleDelete : undefined}
-                isLoading={isLoadingList}
-              />
-                            
-              {totalPages > 1 && (
-                <div className="flex justify-center gap-2 mt-6">
-                  <button
-                    disabled={currentPage === 1 || isLoadingList}
-                    onClick={() => setCurrentPage(prev => prev - 1)}
-                    className="px-5 py-2.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition-colors shadow-sm"
-                  >
-                    Anterior
-                  </button>
-                  <span className="flex items-center px-6 text-sm text-gray-600 font-semibold bg-gray-100 rounded-lg">
-                    Página {currentPage} de {totalPages}
-                  </span>
-                  <button
-                    disabled={currentPage === totalPages || isLoadingList}
-                    onClick={() => setCurrentPage(prev => prev + 1)}
-                    className="px-5 py-2.5 border rounded-lg disabled:opacity-50 hover:bg-gray-50 transition-colors shadow-sm"
-                  >
-                    Próxima
-                  </button>
+              <div className="relative w-full md:max-w-md shrink-0">
+                <Input
+                  placeholder="Pesquisar por título de documento normativo..."
+                  value={searchTerm}
+                  onChange={(e) => {
+                    setSearchTerm(e.target.value);
+                    setCurrentPage(1);
+                  }}
+                  className="pl-12 h-12 text-base shadow-sm w-full"
+                />
+                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+              </div>          
+            </div>
+            
+            <div className={isReadOnly ? "w-full" : "grid grid-cols-1 lg:grid-cols-3 gap-8"}>
+              
+              {!isReadOnly && (
+                <div className="lg:col-span-1">
+                  <DocumentUploadForm onUpload={handleUpload} isLoading={isLoading} />
                 </div>
               )}
+
+              <div className={isReadOnly ? "w-full space-y-4" : "lg:col-span-2 space-y-4"}>
+                <DocumentList
+                  documents={documents}
+                  onDelete={!isReadOnly ? handleDelete : undefined}
+                  isLoading={isLoadingList}
+                />
+                            
+                {totalPages > 1 && (
+                  <div className="flex justify-center gap-2 mt-6">
+                    <button
+                      disabled={currentPage === 1 || isLoadingList}
+                      onClick={() => setCurrentPage(prev => prev - 1)}
+                      className="px-5 py-2.5 border border-gray-300 rounded-lg disabled:opacity-50 hover:bg-gray-50 transition-colors shadow-sm"
+                    >
+                      Anterior
+                    </button>
+                    <span className="flex items-center px-6 text-sm text-gray-600 font-semibold bg-gray-100 rounded-lg">
+                      Página {currentPage} de {totalPages}
+                    </span>
+                    <button
+                      disabled={currentPage === totalPages || isLoadingList}
+                      onClick={() => setCurrentPage(prev => prev + 1)}
+                      className="px-5 py-2.5 border border-gray-300 rounded-lg disabled:opacity-50 hover:bg-gray-50 transition-colors shadow-sm"
+                    >
+                      Próxima
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
+          
           </div>
-        
         </div>
       </DashboardLayout>
     </PrivateRoute>

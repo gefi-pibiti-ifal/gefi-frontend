@@ -18,7 +18,7 @@ export function RegisterForm() {
     email: '',
     password: '',
     siap_registration: '',
-    user_type: 'fiscal',
+    user_type: 'FISCAL',
   });
   const [confirmPassword, setConfirmPassword] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -122,8 +122,8 @@ export function RegisterForm() {
             disabled={isLoading}
             label="Tipo de Usuário"
             options={[
-              { value: 'fiscal', label: 'Fiscal' },
-              { value: 'admin', label: 'Administrador' },
+              { value: 'FISCAL', label: 'Fiscal' },
+              { value: 'ADMINISTRADOR', label: 'Administrador' },
               { value: 'viewer', label: 'Visualizador' },
             ]}
           />

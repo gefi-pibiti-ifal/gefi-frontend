@@ -34,24 +34,24 @@ export function ChatInput({
   };
 
   return (
-    <form onSubmit={handleSubmit} className="flex gap-2">
+    <form onSubmit={handleSubmit} className="flex gap-3">
       <input
         type="text"
         placeholder={placeholder}
         value={message}
         onChange={(e) => setMessage(e.target.value)}
         disabled={isLoading || disabled}
-        className="flex-1 px-4 py-3 border border-border-light rounded-lg text-text-dark placeholder-text-light focus:outline-none focus:ring-2 focus:ring-primary disabled:bg-gray-100 disabled:cursor-not-allowed"
+        className="flex-1 px-6 py-5 text-lg border-2 border-gray-300 bg-white rounded-2xl shadow-sm text-text-dark placeholder-text-light focus:outline-none focus:border-primary focus:ring-4 focus:ring-primary/20 transition-all disabled:bg-gray-100 disabled:cursor-not-allowed"
       />
       <button
         type="submit"
         disabled={isLoading || disabled || !message.trim()}
-        className="px-6 py-3 bg-primary text-white rounded-lg hover:bg-primary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2"
+        className="px-8 py-5 bg-primary text-white rounded-2xl shadow-md hover:bg-primary/90 hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
       >
         {isLoading ? (
-          <Loader2 size={20} className="animate-spin" />
+          <Loader2 size={24} className="animate-spin" />
         ) : (
-          <Send size={20} />
+          <Send size={24} />
         )}
       </button>
     </form>
