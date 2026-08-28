@@ -52,12 +52,92 @@ export interface ChatMessage {
   user_query: string;
   ai_response: string;
   created_at: string;
-  sources?: Array<{ id: string; title: string }>;
+  sources?: RawSource[];
 }
 
 export interface ChatResponse {
   response: string;
-  sources?: string[];
+  sources?: RawSource[];
+}
+
+// ============ Source Types (fontes navegáveis) ============
+
+export type SourceRole = 'PRINCIPAL' | 'COMPLEMENTAR';
+
+/**
+ * TRECHO: intervalo dos chunks que a busca de fato recuperou.
+ * DISPOSITIVO: intervalo do dispositivo inteiro (item/artigo) que os contém.
+ */
+export type LocationPrecision = 'TRECHO' | 'DISPOSITIVO';
+
+export interface SourceLocation {
+  /** Página do PDF (1-based); null quando a extração não preservou páginas. */
+  page_start: number | null;
+  page_end: number | null;
+  /** Offsets no texto indexado devolvido por `GET /documents/:id/content`. */
+  char_start: number | null;
+  char_end: number | null;
+  precision: LocationPrecision;
+}
+
+export interface SourceExcerpt {
+  parent_chunk_id: string | null;
+  citation: string;
+  section_header: string | null;
+  n1_header: string | null;
+  n2_header: string | null;
+  role: SourceRole;
+  /** Texto exato enviado ao modelo. */
+  excerpt: string;
+  location: SourceLocation | null;
+}
+
+export interface SourceDocumentFile {
+  available: boolean;
+  name: string | null;
+  mime_type: string | null;
+  size: number | null;
+}
+
+export interface ResponseSource {
+  id: string;
+  title: string;
+  document_type?: string | null;
+  total_pages?: number | null;
+  file?: SourceDocumentFile | null;
+  view_url?: string | null;
+  download_url?: string | null;
+  content_url?: string | null;
+  excerpts?: SourceExcerpt[] | null;
+}
+
+/**
+ * Fonte como ela chega da API. Respostas e históricos anteriores às fontes
+ * navegáveis trazem apenas o título ou `{ id, title }`; a normalização em
+ * `lib/sources.ts` aceita as três formas.
+ */
+export type RawSource = string | { id?: string; title?: string } | ResponseSource;
+
+export interface DocumentPageMapEntry {
+  page_start: number;
+  page_end: number;
+  start: number;
+  end: number;
+}
+
+/** Resposta de `GET /documents/:id/content`. */
+export interface DocumentContent {
+  id: string;
+  title: string;
+  document_type: string | null;
+  content: string;
+  /** Falso quando o texto devolvido não é o mesmo em que os offsets foram medidos. */
+  aligned_with_offsets: boolean;
+  total_pages: number | null;
+  page_map: DocumentPageMapEntry[];
+  view_url: string | null;
+  download_url: string | null;
+  content_url: string;
 }
 
 export interface CreateConversationPayload {

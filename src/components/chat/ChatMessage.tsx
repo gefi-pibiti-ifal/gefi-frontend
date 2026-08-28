@@ -1,17 +1,19 @@
 'use client';
 
-import { Copy, Check, FileText, ChevronDown } from 'lucide-react';
+import { Copy, Check } from 'lucide-react';
 import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
+import { RawSource } from '@/types';
+import { MessageSources } from './MessageSources';
 
 interface ChatMessageProps {
   isUser: boolean;
   content: string;
-  sources?: Array<{ id: string; title: string }>;
+  sources?: RawSource[];
   timestamp?: string;
 }
 
-export function ChatMessage({ isUser, content, sources, timestamp }: ChatMessageProps) {
+export function ChatMessage({ isUser, content, sources }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
 
   const handleCopy = () => {
@@ -56,39 +58,8 @@ export function ChatMessage({ isUser, content, sources, timestamp }: ChatMessage
                 </ReactMarkdown>
               </div>
 
-              {/* Anexo Inteligente de Fontes (apenas se houver fontes) */}
-              {sources && sources.length > 0 && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <div className="relative group inline-block">
-                    {/* Badge/Botão de Fontes */}
-                    <button className="flex items-center gap-2 px-3 py-1.5 bg-gray-50 border border-gray-200 rounded-lg text-[11px] font-medium text-gray-600 hover:bg-gray-100 transition-all shadow-sm">
-                      <FileText size={14} className="text-primary" />
-                      <span>{sources.length} {sources.length === 1 ? 'fonte consultada' : 'fontes consultadas'}</span>
-                      <ChevronDown size={12} className="group-hover:rotate-180 transition-transform" />
-                    </button>
-
-                    {/* Popover Flutuante (Menu de Fontes) */}
-                    <div className="absolute bottom-full left-0 mb-2 w-72 bg-white border border-gray-200 rounded-xl shadow-2xl opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-30 p-3 transform origin-bottom-left group-hover:scale-100 scale-95">
-                      <p className="text-[10px] font-bold text-gray-400 uppercase tracking-wider mb-3 px-2">Documentos Únicos Consultados:</p>
-                      <div className="space-y-1 max-h-48 overflow-y-auto scrollbar-discreta">
-                        {sources.map((source) => (
-                          <div 
-                            key={source.id} 
-                            className="flex items-center gap-2.5 p-2.5 hover:bg-gray-50 rounded-lg text-xs text-text-dark transition-colors border border-transparent hover:border-gray-100 cursor-default"
-                          >
-                            <div className="w-7 h-7 rounded bg-primary/10 flex items-center justify-center shrink-0">
-                              <FileText size={14} className="text-primary" />
-                            </div>
-                            <span className="truncate font-medium" title={source.title}>
-                              {source.title}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              {/* Fontes consultadas: abrir o documento, localizar o trecho, baixar */}
+              <MessageSources sources={sources} />
             </div>
 
             {/* Ações da Mensagem (Copiar) */}
