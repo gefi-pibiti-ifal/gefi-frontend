@@ -1,42 +1,91 @@
-# Dependencies
-node_modules
+# ==============================================================================
+# Dependencias
+# ==============================================================================
+node_modules/
 .pnp
 .pnp.js
+.pnp.cjs
+.yarn/
+jspm_packages/
 
-# Testing
-coverage
+# Store local do pnpm quando configurado dentro do projeto.
+.pnpm-store/
 
-# Next.js
-.next
-out
+# ==============================================================================
+# Build / saida do Next.js
+# ==============================================================================
+.next/
+out/
+build/
+dist/
+.vercel
+.turbo/
 
-# Production
-build
-dist
+# ==============================================================================
+# TypeScript
+# ==============================================================================
+*.tsbuildinfo
+next-env.d.ts
 
-# Misc
-.DS_Store
+# ==============================================================================
+# Testes e cobertura
+# ==============================================================================
+coverage/
+.nyc_output/
+
+# ==============================================================================
+# Variaveis de ambiente
+#
+# TUDO que casa com .env* fica de fora, exceto o .env.example, que e o contrato
+# publico das variaveis e PRECISA continuar versionado. Sem a regra de excecao
+# abaixo, um `git add .` publicaria segredos (chaves de API, tokens) no
+# historico do repositorio -- de onde e dificil remover depois.
+# ==============================================================================
+.env
+.env.*
+!.env.example
+
+# ==============================================================================
+# Certificados e chaves -- nunca versionar
+# ==============================================================================
 *.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
 
-# Debug
+# ==============================================================================
+# Logs
+# ==============================================================================
+*.log
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
 
-# Local env files
-.env
-.env.local
-.env.development.local
-.env.test.local
-.env.production.local
-
-# IDE
-.vscode
-.idea
+# ==============================================================================
+# Editores / IDE
+# ==============================================================================
+.vscode/
+!.vscode/extensions.json
+.idea/
 *.swp
 *.swo
 *~
 
-# OS
+# ==============================================================================
+# Sistema operacional
+# ==============================================================================
 .DS_Store
 Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# ==============================================================================
+# Cache diverso
+# ==============================================================================
+.cache/
+.eslintcache
+.stylelintcache

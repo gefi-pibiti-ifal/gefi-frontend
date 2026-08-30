@@ -1,0 +1,168 @@
+# ==============================================================================
+# gefi-docs-frontend — dois servicos, ambos buildando pelo MESMO Dockerfile:
+#
+#   web        padrao. Valida a imagem de producao na maquina do dev, apontando
+#              para a API local. NAO e ambiente de desenvolvimento — para
+#              hot-reload continue usando `pnpm dev`.
+#
+#   web-dev    profile `deploy-dev`. Sobe o artefato do ambiente de dev.
+#
+#   docker compose up --build            -> http://localhost:3000
+#   docker compose up --build web-dev    -> http://localhost:3001
+#
+# Para o deploy-dev, NOMEIE o servico em vez de usar `--profile deploy-dev`:
+# nomear um servico ja ativa o profile dele e sobe apenas ele, enquanto a flag
+# `--profile` subiria o `web` junto — servico sem `profiles` roda sempre.
+#
+# Os dois servicos leem AS MESMAS KEYS do .env da raiz (lido automaticamente
+# pelo compose). O que separa os ambientes e o conteudo do .env de cada maquina,
+# nao este arquivo.
+# ==============================================================================
+
+name: gefi-docs-frontend
+
+# ------------------------------------------------------------------------------
+# Hardening compartilhado pelos dois servicos.
+# ------------------------------------------------------------------------------
+x-runtime-base: &runtime-base
+  # Rootfs somente-leitura: mesmo com execucao de codigo no container, nao ha
+  # onde gravar um binario ou alterar o proprio app.
+  read_only: true
+
+  # Impede que um binario setuid eleve privilegio dentro do container. Vale
+  # tambem para todos os processos filhos, e nao pode ser revertido depois.
+  security_opt:
+    - no-new-privileges:true
+
+  # A imagem ja roda como uid 65532 e nao precisa de nenhuma capability: o Next
+  # escuta na 3000, que e porta nao privilegiada.
+  cap_drop:
+    - ALL
+
+  tmpfs:
+    # Unico caminho gravavel de que o processo precisa. uid/gid 65532 sao
+    # obrigatorios: um tmpfs sem essa opcao e montado como root:root 0755 e o
+    # processo nonroot nao consegue escrever nele.
+    - /tmp:uid=65532,gid=65532,mode=1777
+
+  # Contencao de DoS: um vazamento de memoria ou um fork bomb derruba o
+  # container, nao a maquina inteira.
+  mem_limit: 512m
+  pids_limit: 256
+
+  # Sem shell na imagem (distroless), o healthcheck roda pelo proprio node.
+  # Exec form e caminho absoluto sao obrigatorios — nao ha /bin/sh para o
+  # compose interpretar a forma em string.
+  healthcheck:
+    test:
+      - CMD
+      - /nodejs/bin/node
+      - -e
+      - "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+    interval: 10s
+    timeout: 3s
+    retries: 3
+    start_period: 10s
+
+  restart: unless-stopped
+
+  logging:
+    driver: json-file
+    options:
+      max-size: "10m"
+      max-file: "3"
+
+# Alcanca a API rodando na maquina host (dentro do container, localhost e o
+# proprio container).
+x-host-gateway: &host-gateway
+  - "host.docker.internal:host-gateway"
+
+services:
+  # ============================================================================
+  # Servico padrao — sobe com um `docker compose up`, sem profile.
+  # ============================================================================
+  web:
+    <<: *runtime-base
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        # Same-origin de proposito: o navegador chama /api e quem repassa para o
+        # backend e o rewrite do next.config.ts, lendo API_UPSTREAM em runtime.
+        # Cravar aqui a URL real do backend exigiria uma imagem por ambiente e
+        # ainda obrigaria a afrouxar o `connect-src` da CSP.
+        NEXT_PUBLIC_API_URL: /api
+
+    image: gefi-docs-frontend:local
+
+    ports:
+      # 3100 e nao 3000: o gefi-backend ja publica "127.0.0.1:3000:3000" no host,
+      # e as duas portas colidiriam.
+      # Publicado so no loopback: sem o 127.0.0.1, o Docker abre a porta em todas
+      # as interfaces e ainda fura a regra equivalente do firewall.
+      - "127.0.0.1:3100:3000"
+
+    environment:
+      # Destino do proxy de /api, resolvido em runtime. SEM barra no final.
+      API_UPSTREAM: ${DOCKER_API_UPSTREAM:-http://gefi-api:3000}
+
+    networks: [default, backend]
+
+    extra_hosts: *host-gateway
+
+  # ============================================================================
+  # PROFILE: deploy-dev  ->  docker compose up --build web-dev
+  #
+  # Mesmo Dockerfile, mesmo hardening e AS MESMAS KEYS de ambiente do servico
+  # `web`. O que diferencia os ambientes e o .env presente em cada maquina, nao
+  # este arquivo — nenhuma variavel com prefixo por ambiente.
+  # ============================================================================
+  web-dev:
+    <<: *runtime-base
+    profiles: [deploy-dev]
+
+    build:
+      context: .
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api
+
+    image: gefi-docs-frontend:dev
+
+    ports:
+      - "127.0.0.1:3101:3000"
+
+    environment:
+      # Mesma key do servico `web`, mas sem o default de conveniencia dele:
+      # obrigatoria aqui, para o deploy nunca subir apontando para a maquina do
+      # dev por omissao. Sem valor, nao ha rewrite e as chamadas a /api caem em
+      # 404 — falha visivel, em vez de trafego indo para o lugar errado.
+      API_UPSTREAM: ${DOCKER_API_UPSTREAM}
+
+    networks: [default, backend]
+
+    extra_hosts: *host-gateway
+
+# ==============================================================================
+# Redes
+# ==============================================================================
+networks:
+  default:
+
+  # Rede criada pelo compose do gefi-backend (projeto `gefi-backend`, rede
+  # `_default`). Estar nela permite ao front chamar o backend pelo NOME do
+  # container -- `http://gefi-api:3000` -- direto pela rede do Docker.
+  #
+  # Isso e melhor que passar pelo host: o backend publica em
+  # "127.0.0.1:3000:3000", ou seja, so no loopback do host, e um container NAO
+  # alcanca de forma confiavel um servico preso ao loopback via
+  # host.docker.internal. Pela rede interna nem e preciso publicar porta alguma.
+  #
+  # `external: true` => o compose NAO cria a rede: suba o backend primeiro
+  #   cd ../gefi-backend && docker compose up -d
+  # Se o backend rodar FORA do Docker, remova esta rede dos servicos acima e
+  # use DOCKER_API_UPSTREAM=http://host.docker.internal:3000.
+  backend:
+    external: true
+    name: gefi-backend_default

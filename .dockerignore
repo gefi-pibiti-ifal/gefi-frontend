@@ -1,0 +1,64 @@
+# ==============================================================================
+# Tudo que NAO deve entrar no contexto de build.
+#
+# Alem de deixar o build mais rapido, isto e um controle de seguranca: o
+# contexto inteiro e enviado ao daemon do Docker e qualquer arquivo copiado por
+# um `COPY . .` vira uma camada legivel por quem tiver a imagem. Um `.env` ou um
+# `.git/` vazado numa camada nao some com `rm` numa camada seguinte.
+# ==============================================================================
+
+# Dependencias e artefatos -- reinstalados/reconstruidos dentro da imagem.
+node_modules
+.pnpm-store
+.next
+out
+build
+dist
+coverage
+
+# Historico do git: carrega branches, remotes e credenciais de URL.
+.git
+.gitignore
+.gitattributes
+.github
+
+# Segredos. O build recebe configuracao por --build-arg / ENV, nunca por arquivo.
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+secrets/
+
+# Os proprios arquivos de container nao servem para nada dentro da imagem.
+Dockerfile
+.dockerignore
+docker-compose.yml
+docker-compose.*.yml
+
+# Documentacao e metadados de editor.
+README.md
+*.md
+.vscode
+.idea
+
+# Logs e caches locais.
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.cache
+.eslintcache
+
+# Lockfile de outro gerenciador: se sobrar no contexto, confunde o diagnostico
+# de builds nao reprodutiveis.
+package-lock.json
+yarn.lock
+
+# Sistema operacional.
+.DS_Store
+Thumbs.db
