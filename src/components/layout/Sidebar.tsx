@@ -28,7 +28,8 @@ export function Sidebar() {
   const { user, logout } = useAuth();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [page, setPage] = useState(1);
+  // A página corrente só é lida dentro do próprio updater (setPage(prev => ...)).
+  const [, setPage] = useState(1);
   const [hasMore, setHasMore] = useState(true);
   const [isLoadingConversations, setIsLoadingConversations] = useState(true);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
