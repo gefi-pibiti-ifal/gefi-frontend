@@ -3,35 +3,40 @@
   "version": "1.0.0",
   "description": "Frontend para o sistema GeFi Docs (Gestão e Fiscalização Inteligente)",
   "private": true,
+  "packageManager": "pnpm@11.17.0",
+  "engines": {
+    "node": ">=22.12.0",
+    "pnpm": ">=10"
+  },
   "scripts": {
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint",
-    "type-check": "tsc --noEmit"
+    "lint": "eslint .",
+    "type-check": "tsc --noEmit",
+    "audit": "pnpm audit --prod --audit-level moderate"
   },
   "dependencies": {
     "@radix-ui/react-dropdown-menu": "^2.1.24",
-    "axios": "^1.7.7",
+    "axios": "^1.20.0",
     "clsx": "^2.1.1",
-    "lucide-react": "^0.469.0",
-    "next": "^16.0.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "lucide-react": "^1.37.0",
+    "next": "^16.3.3",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
     "react-markdown": "^10.1.0",
-    "sonner": "^1.7.2",
-    "tailwind-merge": "^2.6.0"
+    "sonner": "^2.0.8",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.0.0",
-    "@types/node": "^22.10.5",
-    "@types/react": "^19.0.7",
-    "@types/react-dom": "^19.0.2",
-    "autoprefixer": "^10.4.20",
-    "eslint": "^9.18.0",
-    "eslint-config-next": "^16.0.0",
-    "postcss": "^8.4.49",
-    "tailwindcss": "^4.0.0",
-    "typescript": "^5.7.3"
+    "@tailwindcss/postcss": "^4.3.3",
+    "@types/node": "^22.19.2",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.5",
+    "eslint": "^9.39.5",
+    "eslint-config-next": "^16.3.3",
+    "postcss": "^8.5.26",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^5.9.3"
   }
 }

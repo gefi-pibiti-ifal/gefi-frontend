@@ -1,0 +1,41 @@
+# ==============================================================================
+# Politica de supply-chain do pnpm -- gefi-docs-frontend
+#
+# Este arquivo PRECISA ser copiado para a imagem Docker junto do package.json e
+# do pnpm-lock.yaml: e ele que decide quais pacotes podem executar codigo
+# durante o install e quais versoes transitivas sao permitidas. Sem ele, o
+# `pnpm install --frozen-lockfile` do build aborta pedindo aprovacao manual.
+# ==============================================================================
+
+# ------------------------------------------------------------------------------
+# Scripts de instalacao (preinstall / install / postinstall)
+#
+# O pnpm bloqueia esses scripts por padrao, e exige uma decisao EXPLICITA por
+# pacote: um postinstall executa codigo arbitrario na maquina do dev e no runner
+# de CI, e e o vetor dos ataques de supply-chain recentes no npm. Um pacote novo
+# que peca build faz o install falhar ate alguem revisar e registrar aqui -- que
+# e exatamente o comportamento desejado.
+#
+# unrs-resolver -> false
+#   Resolvedor nativo (Rust) do eslint-plugin-import-x, que chega via
+#   eslint-config-next. O script so escolhe o binario napi da plataforma.
+#   E dependencia exclusiva de LINT: nao participa do `next build` nem vai para
+#   a imagem final, entao nao ha motivo para deixa-lo executar. Sem o binario,
+#   o plugin cai no resolvedor em JavaScript.
+# ------------------------------------------------------------------------------
+allowBuilds:
+  unrs-resolver: false
+
+# ------------------------------------------------------------------------------
+# Overrides de seguranca
+#
+# Forcam uma versao minima em dependencias TRANSITIVAS quando sai um advisory e
+# o pacote pai ainda nao atualizou. Hoje a arvore esta limpa (`pnpm audit` sem
+# achados), entao a lista esta vazia -- este e o lugar de registrar as excecoes
+# quando elas aparecerem.
+#
+# Exemplo:
+# overrides:
+#   nome-do-pacote: '>=1.2.3'
+# ------------------------------------------------------------------------------
+overrides: {}

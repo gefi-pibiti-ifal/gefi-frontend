@@ -78,54 +78,95 @@ src/
 
 ### Pré-requisitos
 
-- Node.js 18+
-- npm, yarn ou pnpm
+- Node.js 22.12+
+- pnpm 11+ (o projeto fixa a versão em `packageManager`; com o Corepack ativo
+  — `corepack enable` — o pnpm certo é usado automaticamente)
+- Docker + Docker Compose (apenas para rodar em container)
+
+> **Por que pnpm e não npm:** o `pnpm-workspace.yaml` guarda a política de
+> supply-chain do projeto — quais pacotes podem executar scripts de instalação
+> (`allowBuilds`) e quais versões transitivas são obrigatórias (`overrides`).
+> Instalar com npm ignora essa política. O `package-lock.json` foi removido; o
+> lockfile válido é o `pnpm-lock.yaml`.
 
 ### Instalação
 
 1. Clone o repositório:
 ```bash
 git clone <repository-url>
-cd gefi-docs-nextjs
+cd gefi-frontend
 ```
 
 2. Instale as dependências:
 ```bash
-npm install
-# ou
-pnpm install
+pnpm install --frozen-lockfile
 ```
 
 3. Configure as variáveis de ambiente:
 ```bash
-cp .env.example .env.local
+cp .env.example .env
 ```
 
-Edite `.env.local` com a URL da sua API:
+Rodando **fora** do container, aponte o axios direto para o backend:
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:3000/api
+NEXT_PUBLIC_API_URL=http://localhost:8000/api
 ```
 
 ### Desenvolvimento
 
-Inicie o servidor de desenvolvimento:
 ```bash
-npm run dev
-# ou
-pnpm dev
+pnpm dev          # http://localhost:3000
+pnpm lint         # ESLint (flat config)
+pnpm type-check   # tsc --noEmit
+pnpm audit        # falha se houver vulnerabilidade em dependência de produção
 ```
-
-A aplicação estará disponível em `http://localhost:3000`
 
 ### Build para Produção
 
 ```bash
-npm run build
-npm start
-# ou
 pnpm build
 pnpm start
 ```
+
+## 🐳 Execução em Container
+
+A imagem é multi-stage e termina em **distroless** (`nodejs24-debian12:nonroot`):
+sem shell, sem gerenciador de pacotes, sem código-fonte e sem `node_modules` de
+build — apenas o runtime Node e a saída `standalone` do Next. Roda como uid
+65532, com rootfs somente-leitura e todas as capabilities descartadas.
+
+O backend precisa estar de pe primeiro: o compose do front se conecta a rede
+`gefi-backend_default` (declarada como `external`) para alcancar o container
+`gefi-api` pelo nome.
+
+```bash
+cd ../gefi-backend && docker compose up -d     # sobe gefi-api + gefi-postgres
+cd ../gefi-frontend
+
+docker compose up --build            # http://localhost:3100
+docker compose up --build web-dev    # http://localhost:3101 (profile deploy-dev)
+```
+
+> As portas do host sao **3100/3101**, e nao 3000: o `gefi-backend` ja publica
+> `127.0.0.1:3000:3000` e as duas colidiriam.
+
+### Como a API é alcançada
+
+O navegador **nunca** fala direto com o backend: `NEXT_PUBLIC_API_URL=/api` faz
+todas as chamadas irem para a própria origem, e `src/app/api/[...path]/route.ts`
+repassa para o endereço em `API_UPSTREAM`, lido **a cada request** (por padrão
+`http://gefi-api:3000`, pela rede interna do Docker).
+
+Consequências práticas:
+
+- a **mesma imagem** serve local, dev e stage — muda-se a env, não o artefato;
+- o backend não precisa de CORS, porque não há requisição cross-origin;
+- a CSP mantém `connect-src 'self'`, sem liberar hosts externos;
+- a topologia interna da rede não aparece no bundle entregue ao cliente.
+
+Sem `API_UPSTREAM`, `/api/*` responde **503** com a instrução de configuração
+(em vez de mandar tráfego para um destino default errado); com o backend fora do
+ar, responde **502** sem vazar host e porta internos.
 
 ## 📖 Funcionalidades
 
