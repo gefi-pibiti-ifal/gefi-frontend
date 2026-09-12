@@ -259,8 +259,12 @@ api.interceptors.response.use(
 
 1. No [Google Cloud Console](https://console.cloud.google.com), crie um
    **OAuth 2.0 Client ID** do tipo *Web application*
-2. Em *Authorized JavaScript origins*, cadastre a origem do frontend
-   (ex.: `http://localhost:3001` e a URL de stage)
+2. Em *Authorized JavaScript origins*, cadastre **todas as origens de onde o
+   navegador carrega o frontend** — não a do backend:
+   - `http://localhost:3000` (`pnpm dev`; se o backend já ocupar a 3000, o Next
+     sobe na 3001 e essa também precisa estar lá)
+   - `http://localhost:3100` (`docker compose up`, conforme o `docker-compose.yml`)
+   - a URL de stage/produção
 3. Copie o **Client ID** para `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (o *Client Secret*
    não é usado neste fluxo)
 4. No backend, defina `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_HD=ifal.edu.br` e
