@@ -46,7 +46,7 @@ export function LoginForm() {
       <div>
         <h1 className="mb-2 text-3xl font-bold text-sidebar-dark">Bem-vindo ao GEFI</h1>
         <p className="text-text-light">
-          Entre com sua conta institucional <strong>@ifal.edu.br</strong> para continuar.
+          Entre com sua conta institucional do <strong>IFAL</strong> para continuar.
         </p>
       </div>
 

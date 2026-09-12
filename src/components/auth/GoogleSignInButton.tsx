@@ -43,7 +43,17 @@ declare global {
 }
 
 const CLIENT_ID = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID ?? '';
-const DOMINIO = process.env.NEXT_PUBLIC_GOOGLE_HD ?? 'ifal.edu.br';
+
+/**
+ * Domínio sugerido no seletor de contas. Vazio => o parâmetro não é enviado e
+ * o Google oferece todas as contas da pessoa.
+ *
+ * Note que é `|| ''` e não `?? ''`: uma variável definida como string vazia
+ * (o caso de quem atende contas de mais de um domínio, como `ifal.edu.br` e
+ * `aluno.ifal.edu.br`) precisa resultar em "sem filtro". Com `??`, a string
+ * vazia passaria adiante e seria enviada ao GIS como `hd: ''`.
+ */
+const DOMINIO = process.env.NEXT_PUBLIC_GOOGLE_HD || '';
 
 interface GoogleSignInButtonProps {
   onCredential: (credential: string) => void | Promise<void>;
@@ -87,7 +97,10 @@ export function GoogleSignInButton({ onCredential, disabled }: GoogleSignInButto
         // `hd` aqui é só conveniência: filtra as contas oferecidas no seletor.
         // A restrição que vale é a do backend, que confere a claim `hd` do ID
         // token -- este parâmetro é do cliente e pode ser contornado.
-        hd: DOMINIO,
+        //
+        // Só é enviado quando configurado: passar `hd: ''` filtraria o seletor
+        // por um domínio vazio em vez de desligar o filtro.
+        ...(DOMINIO ? { hd: DOMINIO } : {}),
         auto_select: false,
         cancel_on_tap_outside: true,
       });
