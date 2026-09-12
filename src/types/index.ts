@@ -4,39 +4,70 @@
  */
 
 // ============ Auth Types ============
+
+export type UserType = 'FISCAL' | 'ADMINISTRADOR';
+
 export interface User {
   id: string;
-  full_name: string;
   email: string;
-  user_type: 'FISCAL' | 'ADMINISTRADOR';
+  /** Nulos ate o primeiro acesso: o convite so define e-mail e cargo. */
+  full_name: string | null;
+  siap_registration: string | null;
+  user_type: UserType;
+  /** Falso => a pessoa ainda precisa passar por /complete-profile. */
+  profile_completed: boolean;
+  picture_url: string | null;
+  revoked_at?: string | null;
+  last_login_at?: string | null;
+  created_at?: string;
 }
 
+/**
+ * Resposta de /auth/google, /auth/me e /users/me.
+ *
+ * NAO tem campo `token`: a sessao vive num cookie httpOnly que o JavaScript
+ * nao consegue ler. Se algum dia o backend voltar a devolver o token no corpo,
+ * e sinal de regressao -- era assim que ele acabava no localStorage.
+ */
 export interface AuthResponse {
-  token: string;
   user: User;
 }
 
-export interface LoginPayload {
-  email: string;
-  password: string;
+export interface GoogleLoginPayload {
+  /** ID token devolvido pelo Google Identity Services. */
+  credential: string;
 }
 
-export interface RegisterPayload {
+export interface CompleteProfilePayload {
   full_name: string;
-  email: string;
-  password: string;
   siap_registration: string;
-  user_type: 'FISCAL' | 'ADMINISTRADOR'
+}
+
+export interface InviteUserPayload {
+  email: string;
+  user_type: UserType;
+}
+
+export interface PaginatedUsers {
+  data: User[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
+  };
 }
 
 export interface AuthContextType {
   user: User | null;
-  token: string | null;
   isAuthenticated: boolean;
+  /** Autenticado, porem ainda sem nome/matricula preenchidos. */
+  needsProfile: boolean;
+  isAdmin: boolean;
   isLoading: boolean;
-  login: (email: string, password: string) => Promise<void>;
-  register: (data: RegisterPayload) => Promise<void>;
-  logout: () => void;
+  loginWithGoogle: (credential: string) => Promise<User>;
+  completeProfile: (data: CompleteProfilePayload) => Promise<void>;
+  logout: () => Promise<void>;
 }
 
 // ============ Chat Types ============

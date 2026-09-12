@@ -2,105 +2,101 @@
 
 /**
  * GeFi Docs - Auth Context
- * Gerenciamento centralizado de autenticação
+ *
+ * A sessão vive num cookie httpOnly emitido pelo backend. Isso muda o modelo
+ * em relação à versão anterior: o cliente NÃO guarda nem enxerga o token, e
+ * portanto não consegue mais reconstruir o estado de autenticação sozinho a
+ * partir do `localStorage`. Quem responde "quem está logado?" é `GET /auth/me`,
+ * consultado uma vez na montagem da aplicação.
+ *
+ * O ganho é que um script injetado na página não tem como ler a sessão --
+ * relevante porque a CSP precisa de `'unsafe-inline'` para o Next.
  */
 
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import api, { getErrorMessage } from '@/lib/api';
-import { AuthContextType, AuthResponse, LoginPayload, RegisterPayload, User } from '@/types';
+import { AuthContextType, AuthResponse, CompleteProfilePayload, User } from '@/types';
 import { toast } from 'sonner';
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
-  const [token, setToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Carregar dados de autenticação do localStorage ao montar
+  // Hidratação inicial. Um 401 aqui é o caso normal de quem não está logado --
+  // não é erro e não deve virar toast.
   useEffect(() => {
-    const storedToken = localStorage.getItem('auth_token');
-    const storedUser = localStorage.getItem('user');
+    let ativo = true;
 
-    if (storedToken && storedUser) {
+    (async () => {
       try {
-        setToken(storedToken);
-        setUser(JSON.parse(storedUser));
-      } catch (error) {
-        console.error('Erro ao carregar dados de autenticação:', error);
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
+        const { data } = await api.get<AuthResponse>('/auth/me');
+        if (ativo) setUser(data.user);
+      } catch {
+        if (ativo) setUser(null);
+      } finally {
+        if (ativo) setIsLoading(false);
       }
-    }
-    setIsLoading(false);
+    })();
+
+    return () => {
+      ativo = false;
+    };
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const loginWithGoogle = useCallback(async (credential: string): Promise<User> => {
     try {
       setIsLoading(true);
-      const payload: LoginPayload = { email, password };
-      const response = await api.post<AuthResponse>('/auth/login', payload);
-
-      const { token: newToken, user: newUser } = response.data;
-
-      // Armazenar no localStorage
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('user', JSON.stringify(newUser));
-
-      // Atualizar estado
-      setToken(newToken);
-      setUser(newUser);
-
-      toast.success('Login realizado com sucesso!');
+      // O backend responde com Set-Cookie; o corpo traz só o usuário.
+      const { data } = await api.post<AuthResponse>('/auth/google', { credential });
+      setUser(data.user);
+      toast.success(`Bem-vindo, ${data.user.full_name ?? data.user.email}!`);
+      return data.user;
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error));
       throw error;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const register = async (data: RegisterPayload) => {
+  const completeProfile = useCallback(async (payload: CompleteProfilePayload) => {
     try {
       setIsLoading(true);
-      const response = await api.post<AuthResponse>('/auth/register', data);
-
-      const { token: newToken, user: newUser } = response.data;
-
-      // Armazenar no localStorage
-      localStorage.setItem('auth_token', newToken);
-      localStorage.setItem('user', JSON.stringify(newUser));
-
-      // Atualizar estado
-      setToken(newToken);
-      setUser(newUser);
-
-      toast.success('Cadastro realizado com sucesso!');
+      // O backend reemite o cookie aqui: `profile_completed` faz parte do
+      // token, e sem o novo cookie a pessoa voltaria para /complete-profile.
+      const { data } = await api.patch<AuthResponse>('/users/me', payload);
+      setUser(data.user);
+      toast.success('Cadastro concluído!');
     } catch (error) {
-      const errorMessage = getErrorMessage(error);
-      toast.error(errorMessage);
+      toast.error(getErrorMessage(error));
       throw error;
     } finally {
       setIsLoading(false);
     }
-  };
+  }, []);
 
-  const logout = () => {
-    localStorage.removeItem('auth_token');
-    localStorage.removeItem('user');
-    setToken(null);
-    setUser(null);
-    toast.success('Logout realizado com sucesso!');
-  };
+  const logout = useCallback(async () => {
+    try {
+      // Só o servidor consegue apagar um cookie httpOnly.
+      await api.post('/auth/logout');
+    } catch {
+      // Sessão já expirada no servidor: do ponto de vista da pessoa, saiu.
+    } finally {
+      setUser(null);
+      toast.success('Sessão encerrada.');
+    }
+  }, []);
 
   const value: AuthContextType = {
     user,
-    token,
-    isAuthenticated: !!token && !!user,
+    isAuthenticated: !!user,
+    needsProfile: !!user && !user.profile_completed,
+    isAdmin: user?.user_type === 'ADMINISTRADOR',
     isLoading,
-    login,
-    register,
+    loginWithGoogle,
+    completeProfile,
     logout,
   };
 

@@ -4,7 +4,7 @@ Frontend para o sistema **GeFi Docs** (Gestão e Fiscalização Inteligente), um
 
 ## 🎯 Características
 
-- **Autenticação JWT**: Login e cadastro seguro de usuários
+- **Login com Google institucional**: acesso com conta `@ifal.edu.br`, liberado previamente por um administrador
 - **Chat RAG**: Interface interativa para consultar documentos normativos com respostas baseadas em IA
 - **Upload de Documentos**: Gerenciamento de documentos normativos para indexação
 - **Navegação Intuitiva**: Sidebar com acesso rápido a todas as funcionalidades
@@ -21,7 +21,7 @@ Frontend para o sistema **GeFi Docs** (Gestão e Fiscalização Inteligente), um
 - **Notificações**: Sonner
 - **Icons**: Lucide React
 - **State Management**: React Context API
-- **Autenticação**: JWT com localStorage
+- **Autenticação**: Google Identity Services + sessão em cookie `httpOnly`
 
 ## 📁 Estrutura de Pastas
 
@@ -33,12 +33,14 @@ src/
 │   ├── globals.css             # Estilos globais
 │   ├── login/
 │   │   └── page.tsx            # Página de login
-│   ├── register/
-│   │   └── page.tsx            # Página de cadastro
+│   ├── complete-profile/
+│   │   └── page.tsx            # 1º acesso: nome e matrícula SIAP
 │   ├── dashboard/
 │   │   ├── page.tsx            # Chat RAG
 │   │   ├── documents/
 │   │   │   └── page.tsx        # Upload de documentos
+│   │   ├── users/
+│   │   │   └── page.tsx        # Administração de acessos (só ADMINISTRADOR)
 │   │   ├── schedule/
 │   │   │   └── page.tsx        # Cronograma
 │   │   └── history/
@@ -47,8 +49,9 @@ src/
 ├── components/
 │   ├── auth/                   # Componentes de autenticação
 │   │   ├── LoginForm.tsx
-│   │   ├── RegisterForm.tsx
-│   │   └── PrivateRoute.tsx
+│   │   ├── GoogleSignInButton.tsx
+│   │   ├── PrivateRoute.tsx
+│   │   └── AdminRoute.tsx
 │   ├── chat/                   # Componentes de chat
 │   │   ├── ChatMessage.tsx
 │   │   ├── ChatInput.tsx
@@ -172,10 +175,13 @@ ar, responde **502** sem vazar host e porta internos.
 
 ### 1. Autenticação
 
-- **Login**: Acesso com email e senha
-- **Cadastro**: Registro de novos usuários (fiscais)
-- **Persistência**: Token JWT armazenado no localStorage
-- **Proteção**: Rotas privadas com redirecionamento automático
+- **Login**: exclusivamente com conta Google institucional — não há senha
+- **Cadastro**: não existe auto-cadastro. Um administrador pré-cadastra o e-mail
+  e o cargo em `/dashboard/users`; a pessoa completa nome e matrícula SIAP em
+  `/complete-profile`, no primeiro acesso
+- **Persistência**: cookie `httpOnly` emitido pelo backend, inacessível ao JavaScript
+- **Proteção**: `PrivateRoute` e `AdminRoute` escondem telas; quem de fato barra o
+  acesso são os guards da API
 
 ### 2. Chat RAG
 
@@ -203,36 +209,69 @@ ar, responde **502** sem vazar host e porta internos.
 
 ### Fluxo de Autenticação
 
-1. Usuário faz login com email/senha
-2. Backend retorna JWT token
-3. Token é armazenado no localStorage
-4. Todas as requisições incluem o token no header `Authorization: Bearer {token}`
-5. Se token expirar (401), usuário é redirecionado para login
+1. A pessoa clica no botão do Google, que devolve um **ID token** ao navegador
+2. O frontend envia esse token para `POST /api/auth/google`
+3. O backend verifica assinatura, emissor, expiração e `aud` contra as chaves
+   públicas do Google, confere `email_verified` e a claim `hd` (domínio do
+   Workspace), e então procura o e-mail na tabela de usuários
+4. **Sem linha pré-cadastrada, o acesso é recusado com 403** — provar identidade
+   no Google não dá acesso; o pré-cadastro é que autoriza
+5. Autorizado, o backend assina o JWT do GeFi e o devolve em
+   `Set-Cookie: gefi_session=...; HttpOnly; SameSite=Lax`
+6. O cookie viaja sozinho nas requisições seguintes (`withCredentials: true`)
+7. Se a sessão expirar ou for revogada (401), a pessoa volta para `/login`
 
-### Interceptadores Axios
+Se `profile_completed` for falso, o `PrivateRoute` desvia para
+`/complete-profile` antes de liberar qualquer tela do dashboard.
+
+### Por que cookie e não localStorage
+
+A versão anterior guardava o JWT em `localStorage`, onde qualquer script na
+página consegue lê-lo. Como a CSP deste projeto precisa de `'unsafe-inline'` em
+`script-src` (o Next injeta o payload de hydration inline), um XSS significaria
+sessão roubada. Com `httpOnly`, o token é invisível ao JavaScript; `SameSite=Lax`
+cobre CSRF, já que o cookie não acompanha POST cross-site.
+
+Consequência prática: **não existe mais interceptor montando `Authorization`**.
+O axios apenas declara `withCredentials: true`.
 
 ```typescript
-// Adiciona token automaticamente
-api.interceptors.request.use((config) => {
-  const token = localStorage.getItem('auth_token');
-  if (token) {
-    config.headers.Authorization = `Bearer ${token}`;
-  }
-  return config;
+const api = axios.create({
+  baseURL: API_URL,
+  headers: { 'Content-Type': 'application/json' },
+  withCredentials: true, // sem isto, o cookie não é enviado e tudo responde 401
 });
 
-// Trata erros 401
+// 401 = sessão expirada ou revogada. Não há nada a limpar no cliente:
+// quem invalida o cookie é o servidor.
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      localStorage.removeItem('auth_token');
+    if (error.response?.status === 401 && !location.pathname.startsWith('/login')) {
       window.location.href = '/login';
     }
     return Promise.reject(error);
   }
 );
 ```
+
+### Configuração do Google
+
+1. No [Google Cloud Console](https://console.cloud.google.com), crie um
+   **OAuth 2.0 Client ID** do tipo *Web application*
+2. Em *Authorized JavaScript origins*, cadastre a origem do frontend
+   (ex.: `http://localhost:3001` e a URL de stage)
+3. Copie o **Client ID** para `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (o *Client Secret*
+   não é usado neste fluxo)
+4. No backend, defina `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_HD=ifal.edu.br` e
+   `BOOTSTRAP_ADMIN_EMAILS` com o e-mail do primeiro administrador
+
+Os escopos usados (`openid email profile`) são não-sensíveis: o app pode ser
+publicado em produção sem passar por verificação da Google.
+
+> **Se o botão do Google não aparecer**, o motivo quase sempre é a CSP: as
+> origens do `accounts.google.com` precisam estar liberadas em `next.config.ts`,
+> e o bloqueio só aparece no console do navegador, não na aba Network.
 
 ## 🎨 Design e Estilos
 
@@ -292,8 +331,17 @@ await api.delete(`/documents/${id}`);
 
 ### Autenticação
 
-- `POST /api/auth/login` - Login
-- `POST /api/auth/register` - Cadastro
+- `POST /api/auth/google` - Login com ID token do Google (responde `Set-Cookie`)
+- `POST /api/auth/logout` - Encerra a sessão
+- `GET /api/auth/me` - Usuário da sessão atual (hidratação do `AuthContext`)
+
+### Usuários
+
+- `PATCH /api/users/me` - Completa o próprio perfil (nome + SIAP)
+- `GET /api/users` - Lista usuários *(ADMINISTRADOR)*
+- `POST /api/users` - Pré-cadastra e-mail + cargo *(ADMINISTRADOR)*
+- `PATCH /api/users/:id` - Altera cargo *(ADMINISTRADOR)*
+- `DELETE /api/users/:id` - Remove ou revoga acesso *(ADMINISTRADOR)*
 
 ### Chat RAG
 
@@ -366,9 +414,25 @@ Tamanhos: `sm`, `md`, `lg`
 
 Verifique se o arquivo existe e se o caminho está correto. Todos os imports devem usar o alias `@/`.
 
-### Erro: "Token expirado"
+### O botão do Google não aparece
 
-O token foi expirado. Faça login novamente. O redirecionamento automático deve ocorrer.
+Quase sempre é a CSP bloqueando `accounts.google.com` — e o bloqueio só aparece
+no **console** do navegador, não na aba Network. Confira as diretivas
+`script-src`, `frame-src`, `style-src` e `connect-src` em `next.config.ts`.
+Se o console estiver limpo, verifique se `NEXT_PUBLIC_GOOGLE_CLIENT_ID` está
+definida no build (o componente mostra o motivo na tela quando ela falta).
+
+### "Seu e-mail não está autorizado a acessar o GeFi" (403)
+
+O login no Google funcionou, mas o e-mail não está pré-cadastrado. Peça a um
+administrador para cadastrá-lo em `/dashboard/users`. Se ainda não existe nenhum
+administrador, use `BOOTSTRAP_ADMIN_EMAILS` no backend e reinicie o serviço.
+
+### Login responde 200 mas continua deslogado
+
+O cookie de sessão não chegou ao navegador. Verifique se o axios está com
+`withCredentials: true` e, em HTTP local, se `COOKIE_SECURE=false` no backend —
+um cookie `Secure` é descartado silenciosamente fora de HTTPS.
 
 ### Erro: "CORS"
 

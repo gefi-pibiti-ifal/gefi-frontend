@@ -12,29 +12,25 @@ const api: AxiosInstance = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
+  /**
+   * A sessão é um cookie httpOnly, não um token em memória: sem isto o axios
+   * não o envia e toda requisição autenticada responde 401.
+   *
+   * Não existe mais interceptor de request montando `Authorization`. O token
+   * é inacessível ao JavaScript de propósito — é justamente o que impede que
+   * um script injetado na página roube a sessão.
+   */
+  withCredentials: true,
 });
 
-// Interceptor: Adicionar token JWT em todas as requisições
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
-
-// Interceptor: Tratar erros de autenticação (401)
+// Interceptor: tratar sessão expirada ou revogada (401)
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expirado ou inválido
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-        // Redirecionar para login
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      // Nada a limpar no cliente: quem invalida o cookie é o servidor. Só não
+      // redirecione quem já está no login, para não criar laço de navegação.
+      if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
     }
