@@ -20,7 +20,7 @@ import {
   SourceExcerpt,
   SourceLocation,
 } from '@/types';
-import { documentContentPath, documentFilePath } from './documents';
+import { documentContentPath, documentFilePath, repairFileName } from './documents';
 
 export interface NormalizedSource {
   /** null para fontes antigas que guardaram só o título: não são navegáveis. */
@@ -89,9 +89,13 @@ function normalizeFile(value: unknown): SourceDocumentFile | null {
   if (!value || typeof value !== 'object') return null;
   const raw = value as Record<string, unknown>;
 
+  const name = asString(raw.name);
+
   return {
     available: Boolean(raw.available),
-    name: asString(raw.name),
+    // Os nomes gravados no upload têm os acentos corrompidos; recuperá-los aqui
+    // faz a interface exibir e o download salvar o mesmo nome correto.
+    name: name ? repairFileName(name) : null,
     mime_type: asString(raw.mime_type),
     size: asNumber(raw.size),
   };

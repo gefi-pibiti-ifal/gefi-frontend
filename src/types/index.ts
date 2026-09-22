@@ -45,6 +45,8 @@ export interface Conversation {
   title: string;
   created_at: string;
   is_pinned?: boolean;
+  /** Personalidade fixada na conversa; null = segue a preferencia do usuario. */
+  persona?: string | null;
 }
 
 export interface ChatMessage {
@@ -53,6 +55,8 @@ export interface ChatMessage {
   ai_response: string;
   created_at: string;
   sources?: RawSource[];
+  /** Personalidade que de fato gerou esta resposta (pode diferir da atual). */
+  persona?: string | null;
 }
 
 export interface ChatResponse {
@@ -140,13 +144,40 @@ export interface DocumentContent {
   content_url: string;
 }
 
+// ============ Persona Types (registro das respostas) ============
+
+/**
+ * Item do catálogo de `GET /chat/personas`.
+ *
+ * O `id` é `string` de propósito, e não uma união fechada: o backend é a fonte
+ * da verdade e uma personalidade nova deve aparecer na interface sem exigir
+ * deploy do frontend.
+ */
+export interface Persona {
+  id: string;
+  label: string;
+  description: string;
+  /** Frase de exemplo no mesmo caso — deixa a diferença visível antes da escolha. */
+  sample: string;
+  is_default: boolean;
+}
+
+/** Resposta de `GET /users/me`. */
+export interface UserProfile extends User {
+  siap_registration?: string;
+  response_persona: string;
+  available_personas?: Persona[];
+}
+
 export interface CreateConversationPayload {
   title: string;
+  persona?: string | null;
 }
 
 export interface AskPayload {
   conversation_id: string;
   query: string;
+  persona?: string | null;
 }
 
 // ============ Document Types ============
@@ -164,6 +195,10 @@ export interface Document {
   title: string;
   document_type: DocumentType;
   created_at: string;
+  /** Ausente nos documentos indexados antes da preservação do arquivo. */
+  file_name?: string | null;
+  file_size?: number | null;
+  total_pages?: number | null;
 }
 
 export interface DocumentUploadPayload {

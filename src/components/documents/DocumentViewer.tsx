@@ -26,6 +26,7 @@ import {
   Copy,
   Download,
   FileText,
+  Highlighter,
   Loader2,
   X,
 } from 'lucide-react';
@@ -150,6 +151,10 @@ export function DocumentViewer({
     return source.totalPages ? Math.min(clamped, source.totalPages) : clamped;
   }, [activeExcerpt, source.totalPages]);
 
+  const pageLabel = activeExcerpt?.location
+    ? formatPageLabel(targetPage, activeExcerpt.location.page_end)
+    : null;
+
   const contentRange = useMemo(
     () => (content ? resolveContentRange(activeExcerpt?.location, content) : null),
     [content, activeExcerpt],
@@ -215,10 +220,10 @@ export function DocumentViewer({
 
     if (mode === 'file') {
       if (!targetPage) return 'Sem página registrada para este trecho';
-      const label = formatPageLabel(targetPage, activeExcerpt.location.page_end);
-      return activeExcerpt.location.precision === 'TRECHO'
-        ? `Aberto em ${label}`
-        : `Aberto em ${label} (dispositivo inteiro)`;
+      // O visualizador do browser só posiciona por PÁGINA. Uma página costuma
+      // conter o fim de um dispositivo e o começo de outro, então prometer
+      // "aberto no trecho" seria falso: o topo da página pode ser outro anexo.
+      return `O PDF abre em ${pageLabel} — o trecho está nessa página, não necessariamente no topo`;
     }
 
     if (!contentRange) return 'Trecho não localizável neste texto';
@@ -369,22 +374,48 @@ export function DocumentViewer({
             {/* No PDF não há como marcar o trecho: ele fica pronto para copiar */}
             {mode === 'file' && activeExcerpt && (
               <div className="border-b border-gray-100 px-4 py-3">
+                {/* A citação vem primeiro: a página pode começar por outro
+                    dispositivo, e saber que se procura o "Item 2 – ANEXO VIII-B"
+                    é o que evita ler o topo da página e concluir que o
+                    visualizador abriu no lugar errado. */}
+                {activeExcerpt.citation && (
+                  <p className="mb-1.5 text-[11px] font-semibold text-text-dark">
+                    {activeExcerpt.citation}
+                    {pageLabel && (
+                      <span className="ml-2 font-normal text-text-light">{pageLabel}</span>
+                    )}
+                  </p>
+                )}
+
                 <div className="flex items-start gap-3">
                   <p className="line-clamp-2 flex-1 text-[11px] italic leading-relaxed text-gray-600">
                     “{activeExcerpt.excerpt}”
                   </p>
-                  <button
-                    onClick={handleCopyExcerpt}
-                    title="Copiar o trecho para procurar no documento (Ctrl+F)"
-                    className="flex shrink-0 items-center gap-1.5 rounded-md border border-border-light px-2 py-1 text-[11px] font-medium text-text-dark transition-colors hover:bg-gray-50"
-                  >
-                    {copied ? (
-                      <Check size={12} className="text-primary" />
-                    ) : (
-                      <Copy size={12} />
+
+                  <div className="flex shrink-0 items-center gap-1.5">
+                    {source.contentUrl && (
+                      <button
+                        onClick={() => setMode('text')}
+                        title="Abrir o texto indexado com este trecho destacado"
+                        className="flex items-center gap-1.5 rounded-md border border-primary/40 bg-primary/5 px-2 py-1 text-[11px] font-medium text-text-dark transition-colors hover:bg-primary/10"
+                      >
+                        <Highlighter size={12} className="text-primary" />
+                        Ver trecho exato
+                      </button>
                     )}
-                    {copied ? 'Copiado' : 'Copiar trecho'}
-                  </button>
+                    <button
+                      onClick={handleCopyExcerpt}
+                      title="Copiar o trecho para procurar no documento (Ctrl+F)"
+                      className="flex items-center gap-1.5 rounded-md border border-border-light px-2 py-1 text-[11px] font-medium text-text-dark transition-colors hover:bg-gray-50"
+                    >
+                      {copied ? (
+                        <Check size={12} className="text-primary" />
+                      ) : (
+                        <Copy size={12} />
+                      )}
+                      {copied ? 'Copiado' : 'Copiar trecho'}
+                    </button>
+                  </div>
                 </div>
               </div>
             )}

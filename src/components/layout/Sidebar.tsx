@@ -11,6 +11,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import api from '@/lib/api';
 import { Conversation } from '@/types';
 import { toast } from 'sonner';
+import { PersonaPreference } from '@/components/chat/PersonaPreference';
 
 // Importação dos componentes Radix (ou Shadcn)
 import * as DropdownMenu from '@radix-ui/react-dropdown-menu';
@@ -247,6 +248,9 @@ export function Sidebar() {
 
         {/* Footer (Logout) Preservado */}
         <div className="p-4 border-t border-white/10 shrink-0 mt-auto">
+          {/* Estilo das respostas: a preferência do usuário, acima do bloco dele */}
+          <PersonaPreference />
+
           {user && (
             <div className="px-4 py-3 bg-white/5 rounded-lg mb-4">
               <p className="text-[10px] text-white/50 uppercase">Usuário</p>

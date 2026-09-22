@@ -29,7 +29,12 @@ const CSP = [
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline'",
+  // O visualizador de documentos carrega o PDF a partir de um object URL
+  // (blob:), porque a rota do arquivo exige o JWT no cabecalho e uma navegacao
+  // direta do iframe nao o enviaria. Sem esta diretiva os frames caem no
+  // default-src 'self', que nao cobre blob:, e o Chrome bloqueia o documento.
+  "frame-src 'self' blob:",
+  `script-src 'self' 'unsafe-inline'${process.env.NODE_ENV === 'development' ? " 'unsafe-eval'" : ''}`,
   "style-src 'self' 'unsafe-inline'",
   "img-src 'self' data: blob:",
   "font-src 'self' data:",
@@ -40,7 +45,7 @@ const CSP = [
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-
+  allowedDevOrigins: ['crinkle-escalator-bok.ngrok-free.dev'],  
   /**
    * Empacota o servidor + apenas as dependencias realmente usadas em
    * `.next/standalone`. E o que permite a imagem final NAO carregar

@@ -6,10 +6,13 @@ import { DashboardLayout } from '@/components/layout/DashboardLayout';
 import { PrivateRoute } from '@/components/auth/PrivateRoute';
 import { ChatMessage } from '@/components/chat/ChatMessage';
 import { ChatInput } from '@/components/chat/ChatInput';
-import { Loader2, Bell } from 'lucide-react';
+import { ThinkingIndicator } from '@/components/chat/ThinkingIndicator';
+import { ConversationPersona } from '@/components/chat/ConversationPersona';
+import { Loader2, Bell, SquarePen } from 'lucide-react';
 import { ChatMessage as ChatMessageType } from '@/types';
 import api from '@/lib/api';
 import { toast } from 'sonner';
+import { usePersonas } from '@/contexts/PersonaContext';
 
 function ChatContent() {
   const params = useParams();
@@ -19,6 +22,12 @@ function ChatContent() {
   const [messages, setMessages] = useState<ChatMessageType[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isFetchingHistory, setIsFetchingHistory] = useState(true);
+  /** Personalidade fixada nesta conversa; null = segue a preferência do usuário. */
+  const [conversationPersona, setConversationPersona] = useState<string | null>(null);
+
+  const { preference } = usePersonas();
+  // Quem vai gerar a proxima resposta: a conversa manda; sem ela, a preferencia.
+  const personaEfetiva = conversationPersona ?? preference;
 
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const hasSentInitial = useRef(false);
@@ -37,6 +46,9 @@ function ChatContent() {
         const response = await api.get(`/chat/conversations/${conversationId}`);
         if (isMounted && response.data?.interactionHistory) {
           setMessages(response.data.interactionHistory);
+          // Cada interacao do historico ja traz o seu proprio `persona`; aqui
+          // guardamos o da CONVERSA, que e o que o seletor do cabecalho mostra.
+          setConversationPersona(response.data.persona ?? null);
         }
       } catch (error) {
         if (isMounted) {
@@ -101,6 +113,7 @@ function ChatContent() {
                   id: response.data.id ?? tempId,
                   ai_response: response.data.ai_response ?? response.data.response ?? '',
                   sources: response.data.sources,
+                  persona: response.data.persona ?? null,
                   created_at: response.data.created_at ?? msg.created_at,
                 }
               : msg
@@ -114,6 +127,7 @@ function ChatContent() {
             user_query: query,
             ai_response: response.data.ai_response ?? response.data.response ?? '',
             sources: response.data.sources,
+            persona: response.data.persona ?? null,
             created_at: response.data.created_at,
           },
         ];
@@ -134,14 +148,31 @@ function ChatContent() {
   return (
     <div className="flex flex-col h-full bg-white relative overflow-hidden">
       <div className="flex items-center justify-between p-6 border-b border-gray-200 shadow-sm bg-white z-10 shrink-0">
-        <div>
+        {/* O título é o atalho para começar uma conversa nova */}
+        <button
+          onClick={() => router.push('/dashboard')}
+          title="Iniciar um novo chat"
+          className="group flex items-center gap-2 rounded-lg px-1 py-0.5 transition-colors hover:bg-gray-50"
+        >
           <h1 className="text-xl font-bold text-text-dark">
             GE<span className="text-primary">FI</span> Assistente
           </h1>
-        </div>
-        <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
-          <Bell size={24} className="text-text-dark" />
+          <span className="flex items-center gap-1 text-[11px] font-medium text-text-light opacity-0 transition-opacity group-hover:opacity-100">
+            <SquarePen size={12} />
+            novo chat
+          </span>
         </button>
+
+        <div className="flex items-center gap-3">
+          <ConversationPersona
+            conversationId={conversationId}
+            value={conversationPersona}
+            onChange={setConversationPersona}
+          />
+          <button className="p-2 hover:bg-gray-100 rounded-lg transition-colors">
+            <Bell size={24} className="text-text-dark" />
+          </button>
+        </div>
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 transition-all duration-700 ease-in-out">
@@ -166,15 +197,11 @@ function ChatContent() {
                       content={msg.ai_response}
                       sources={msg.sources}
                       timestamp={msg.created_at}
+                      persona={msg.persona}
                     />
                   ) : (
                     isLoading && index === messages.length - 1 && (
-                      <div className="flex justify-start mb-10 w-full max-w-4xl mx-auto mt-2">
-                        <div className="flex items-center gap-3 p-4 bg-gray-50 rounded-2xl rounded-tl-sm border border-gray-100">
-                          <Loader2 className="w-5 h-5 animate-spin text-primary" />
-                          <span className="text-sm font-medium text-text-dark">O GeFi está a pensar...</span>
-                        </div>
-                      </div>
+                      <ThinkingIndicator persona={personaEfetiva} />
                     )
                   )}
                 </div>

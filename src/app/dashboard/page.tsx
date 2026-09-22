@@ -10,9 +10,12 @@ import { Loader2, Bell } from 'lucide-react';
 import api from '@/lib/api';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import { GefiAvatar } from '@/components/GefiAvatar';
+import { usePersonas } from '@/contexts/PersonaContext';
 
-export default function DashboardPage() {
+function DashboardContent() {
   const { user } = useAuth();
+  const { preference } = usePersonas();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
 
@@ -36,8 +39,6 @@ export default function DashboardPage() {
   };
 
   return (
-  <PrivateRoute>
-    <DashboardLayout>
       <div className="flex flex-col h-full bg-white relative overflow-hidden">
         <div className="flex items-center justify-between p-6 border-b border-gray-200 shadow-sm bg-white z-10">
           <div>
@@ -54,8 +55,8 @@ export default function DashboardPage() {
           <div className="w-full max-w-3xl flex flex-col space-y-8 animate-in fade-in zoom-in-95 duration-500 mx-auto -mt-20">
             
             <div className="flex items-center gap-4 w-full">
-              <div className="w-12 h-12 md:w-12 md:h-12 rounded-full bg-sidebar-dark flex items-center justify-center shrink-0 shadow-md">
-                <span className="text-2xl md:text-3xl">🤓</span>
+              <div className="w-16 h-16 md:w-16 md:h-16 rounded-full overflow-hidden shrink-0 shadow-md">
+                <GefiAvatar size={64} persona={preference} />
               </div>
               <h2 className="text-2xl md:text-3xl font-bold text-text-dark leading-tight">
                 Olá! Sou o GeFi. Como posso ajudar hoje, <span className="text-primary">{user?.full_name?.split(' ')[0] || 'Fiscal'}</span>?
@@ -90,7 +91,15 @@ export default function DashboardPage() {
         </div>
         
       </div>
-    </DashboardLayout>
-  </PrivateRoute>
-);
+  );
+}
+
+export default function DashboardPage() {
+  return (
+    <PrivateRoute>
+      <DashboardLayout>
+        <DashboardContent />
+      </DashboardLayout>
+    </PrivateRoute>
+  );
 }

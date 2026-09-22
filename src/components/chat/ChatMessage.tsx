@@ -5,16 +5,26 @@ import { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { RawSource } from '@/types';
 import { MessageSources } from './MessageSources';
+import { GefiAvatar } from '@/components/GefiAvatar';
+import { usePersonas } from '@/contexts/PersonaContext';
+import { personaLabel } from '@/lib/personas';
 
 interface ChatMessageProps {
   isUser: boolean;
   content: string;
   sources?: RawSource[];
   timestamp?: string;
+  /** Personalidade que gerou esta resposta — não necessariamente a atual. */
+  persona?: string | null;
 }
 
-export function ChatMessage({ isUser, content, sources }: ChatMessageProps) {
+export function ChatMessage({ isUser, content, sources, persona }: ChatMessageProps) {
   const [copied, setCopied] = useState(false);
+  const { personas } = usePersonas();
+
+  // O selo nomeia a personalidade que REALMENTE gerou o texto: a conversa pode
+  // ter fixado outra, e uma resposta antiga guarda o registro da época.
+  const selo = personaLabel(personas, persona);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(content);
@@ -37,8 +47,8 @@ export function ChatMessage({ isUser, content, sources }: ChatMessageProps) {
       <div className="space-y-3 max-w-full w-full">
         <div className="flex gap-4 max-w-full">
           {/* Avatar da IA */}
-          <div className="w-10 h-10 rounded-full bg-sidebar-dark flex items-center justify-center flex-shrink-0 shadow-sm mt-1 border border-transparent">
-            <span className="text-xl">🤓</span>
+          <div className="w-14 h-14 rounded-full overflow-hidden flex-shrink-0 shadow-sm mt-1">
+            <GefiAvatar size={56} persona={persona} />
           </div>
           
           <div className="flex flex-col gap-2 max-w-full overflow-hidden">
@@ -63,7 +73,7 @@ export function ChatMessage({ isUser, content, sources }: ChatMessageProps) {
             </div>
 
             {/* Ações da Mensagem (Copiar) */}
-            <div className="flex gap-2 ml-2">
+            <div className="flex gap-2 ml-2 items-center">
               <button
                 onClick={handleCopy}
                 className="p-1.5 hover:bg-gray-100 rounded-md transition-colors border border-transparent hover:border-gray-200"
@@ -75,6 +85,15 @@ export function ChatMessage({ isUser, content, sources }: ChatMessageProps) {
                   <Copy size={16} className="text-text-light" />
                 )}
               </button>
+
+              {selo && (
+                <span
+                  className="text-[10px] text-text-light"
+                  title="Estilo em que esta resposta foi gerada"
+                >
+                  {selo}
+                </span>
+              )}
             </div>
           </div>
         </div>
