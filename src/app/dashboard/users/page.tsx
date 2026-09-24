@@ -12,7 +12,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import api, { getErrorMessage } from '@/lib/api';
 import { PaginatedUsers, User, UserType } from '@/types';
 
-const POR_PAGINA = 10;
+/** Registros por pagina. O backend aceita de 1 a 100 (ListUsersDto). */
+const POR_PAGINA = 4;
 
 const OPCOES_CARGO = [
   { value: 'FISCAL', label: 'Fiscal' },
@@ -31,6 +32,8 @@ function UsersAdmin() {
 
   const [usuarios, setUsuarios] = useState<User[]>([]);
   const [busca, setBusca] = useState('');
+  /** Termo ja debounced: e ele que dispara a consulta. */
+  const [buscaAplicada, setBuscaAplicada] = useState('');
   const [pagina, setPagina] = useState(1);
   const [totalPaginas, setTotalPaginas] = useState(1);
   const [carregandoLista, setCarregandoLista] = useState(true);
@@ -51,6 +54,14 @@ function UsersAdmin() {
       });
       setUsuarios(data.data);
       setTotalPaginas(data.meta.totalPages);
+
+      // A pagina atual pode ter deixado de existir -- ao remover o unico
+      // registro dela, ou ao filtrar a lista. Sem esta correcao a tela
+      // ficaria vazia, com "Proxima" desabilitada e nenhuma pista do que
+      // aconteceu. Com 4 registros por pagina isso passa a ser comum.
+      if (paginaAtual > data.meta.totalPages) {
+        setPagina(data.meta.totalPages);
+      }
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -58,11 +69,21 @@ function UsersAdmin() {
     }
   }, []);
 
-  // Debounce na busca, como em /dashboard/documents.
+  // O debounce vale SO para a busca. Antes ele envolvia tambem a troca de
+  // pagina, o que custava 400ms a cada clique em Anterior/Proxima -- toleravel
+  // com 10 registros por pagina, irritante com 4, que e quando se pagina muito.
   useEffect(() => {
-    const timer = setTimeout(() => void carregar(pagina, busca), 400);
+    const timer = setTimeout(() => setBuscaAplicada(busca), 400);
     return () => clearTimeout(timer);
-  }, [pagina, busca, carregar]);
+  }, [busca]);
+
+  useEffect(() => {
+    // setTimeout(0) em vez de chamar direto: carregar() faz setState, e
+    // dispara-lo de forma sincrona no corpo do efeito gera render em cascata
+    // (react-hooks/set-state-in-effect). Na pratica, resposta imediata.
+    const timer = setTimeout(() => void carregar(pagina, buscaAplicada), 0);
+    return () => clearTimeout(timer);
+  }, [pagina, buscaAplicada, carregar]);
 
   const convidar = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -81,7 +102,7 @@ function UsersAdmin() {
       setNovoEmail('');
       setNovoCargo('FISCAL');
       setPagina(1);
-      await carregar(1, busca);
+      await carregar(1, buscaAplicada);
     } catch (error) {
       setErroConvite(getErrorMessage(error));
     } finally {
@@ -113,7 +134,7 @@ function UsersAdmin() {
       // O backend decide entre apagar e revogar conforme o histórico da conta;
       // a mensagem precisa refletir o que de fato aconteceu.
       toast.success(data.revogado ? 'Acesso revogado.' : 'Convite removido.');
-      await carregar(pagina, busca);
+      await carregar(pagina, buscaAplicada);
     } catch (error) {
       toast.error(getErrorMessage(error));
     } finally {
@@ -284,7 +305,7 @@ function UsersAdmin() {
           {totalPaginas > 1 && (
             <div className="mt-6 flex justify-center gap-2">
               <button
-                disabled={pagina === 1 || carregandoLista}
+                disabled={pagina <= 1 || carregandoLista}
                 onClick={() => setPagina((p) => p - 1)}
                 className="rounded-lg border border-gray-300 px-5 py-2.5 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
@@ -294,7 +315,7 @@ function UsersAdmin() {
                 Página {pagina} de {totalPaginas}
               </span>
               <button
-                disabled={pagina === totalPaginas || carregandoLista}
+                disabled={pagina >= totalPaginas || carregandoLista}
                 onClick={() => setPagina((p) => p + 1)}
                 className="rounded-lg border border-gray-300 px-5 py-2.5 shadow-sm transition-colors hover:bg-gray-50 disabled:opacity-50"
               >
