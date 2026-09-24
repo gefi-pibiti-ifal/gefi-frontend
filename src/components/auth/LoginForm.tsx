@@ -42,15 +42,28 @@ export function LoginForm() {
   );
 
   return (
-    <div className="space-y-6">
+    // max-w-[400px] casa com o teto do widget do Google (ver LARGURA_MAX em
+    // GoogleSignInButton): o botao nao cresce alem disso, entao limitar a coluna
+    // aqui faz titulo, texto e botao terminarem exatamente na mesma borda.
+    // Sem isso, a coluna de 448px (max-w-md) deixaria o botao 48px mais curto.
+    <div className="mx-auto w-full max-w-[400px] space-y-6">
       <div>
         <h1 className="mb-2 text-3xl font-bold text-sidebar-dark">Bem-vindo ao GEFI</h1>
-        <p className="text-text-light">
+        {/*
+          `text-sm` e o que faz a frase caber em UMA linha dentro dos 400px da
+          coluna: a 16px ela ocupa ~445px e quebraria. Nao ha `whitespace-nowrap`
+          de proposito -- em telas estreitas a coluna encolhe e o texto precisa
+          refluir, e um nowrap ali causaria transbordo horizontal em vez de
+          quebra. Assim o comportamento e: uma linha enquanto couber, quebra
+          quando a tela diminui.
+        */}
+        <p className="text-sm text-text-light">
           Entre com sua conta institucional do <strong>IFAL</strong> para continuar.
         </p>
       </div>
 
-      <div className="flex justify-center py-2">
+      {/* Sem `justify-center`: o botao agora ocupa a largura toda do bloco. */}
+      <div className="py-2">
         <GoogleSignInButton onCredential={handleCredential} disabled={isLoading} />
       </div>
 
