@@ -4,7 +4,7 @@ Frontend para o sistema **GeFi Docs** (Gestão e Fiscalização Inteligente), um
 
 ## 🎯 Características
 
-- **Login com Google institucional**: acesso com conta `@ifal.edu.br`, liberado previamente por um administrador
+- **Login com Google institucional**: acesso com conta do IFAL, liberado previamente por um administrador
 - **Chat RAG**: Interface interativa para consultar documentos normativos com respostas baseadas em IA
 - **Upload de Documentos**: Gerenciamento de documentos normativos para indexação
 - **Navegação Intuitiva**: Sidebar com acesso rápido a todas as funcionalidades
@@ -110,9 +110,10 @@ pnpm install --frozen-lockfile
 cp .env.example .env
 ```
 
-Rodando **fora** do container, aponte o axios direto para o backend:
+Rodando **fora** do container, aponte o axios direto para o backend
+(3200 e a porta que o compose do `gefi-backend` publica no host):
 ```env
-NEXT_PUBLIC_API_URL=http://localhost:8000/api
+NEXT_PUBLIC_API_URL=http://localhost:3200/api
 ```
 
 ### Desenvolvimento
@@ -150,8 +151,11 @@ docker compose up --build            # http://localhost:3100
 docker compose up --build web-dev    # http://localhost:3101 (profile deploy-dev)
 ```
 
-> As portas do host sao **3100/3101**, e nao 3000: o `gefi-backend` ja publica
-> `127.0.0.1:3000:3000` e as duas colidiriam.
+> As portas do host sao **3100/3101**, e nao 3000: a 3000 fica reservada para
+> `pnpm dev` deste mesmo projeto. O `gefi-backend` publica em **3200**.
+>
+> Resumo das portas do host: `3000` front em dev · `3100`/`3101` front em
+> container · `3200` API · `2999` API em deploy · `5432` Postgres.
 
 ### Como a API é alcançada
 
@@ -261,14 +265,17 @@ api.interceptors.response.use(
    **OAuth 2.0 Client ID** do tipo *Web application*
 2. Em *Authorized JavaScript origins*, cadastre **todas as origens de onde o
    navegador carrega o frontend** — não a do backend:
-   - `http://localhost:3000` (`pnpm dev`; se o backend já ocupar a 3000, o Next
-     sobe na 3001 e essa também precisa estar lá)
+   - `http://localhost:3000` (`pnpm dev`)
    - `http://localhost:3100` (`docker compose up`, conforme o `docker-compose.yml`)
    - a URL de stage/produção
 3. Copie o **Client ID** para `NEXT_PUBLIC_GOOGLE_CLIENT_ID` (o *Client Secret*
    não é usado neste fluxo)
-4. No backend, defina `GOOGLE_CLIENT_ID`, `GOOGLE_ALLOWED_HD=ifal.edu.br` e
-   `BOOTSTRAP_ADMIN_EMAILS` com o e-mail do primeiro administrador
+4. No backend, defina `GOOGLE_CLIENT_ID` (o mesmo valor) e
+   `BOOTSTRAP_ADMIN_EMAILS` com o e-mail do primeiro administrador.
+   Deixe `GOOGLE_ALLOWED_HD` **vazio** enquanto o IFAL usar dois domínios
+   (`ifal.edu.br` para servidores, `aluno.ifal.edu.br` para estudantes): a
+   variável aceita um único domínio, e preencher qualquer um dos dois
+   trancaria o outro do lado de fora. A autorização fica com a allowlist.
 
 Os escopos usados (`openid email profile`) são não-sensíveis: o app pode ser
 publicado em produção sem passar por verificação da Google.
@@ -305,7 +312,7 @@ A aplicação é totalmente responsiva:
 O cliente HTTP é configurado em `src/lib/api.ts`:
 
 ```typescript
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3200/api';
 
 const api = axios.create({
   baseURL: API_URL,

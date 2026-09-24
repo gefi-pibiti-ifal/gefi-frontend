@@ -5,7 +5,10 @@
 
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+// Fallback usado só quando NEXT_PUBLIC_API_URL não é definida no build.
+// 3200, e não 3000: a 3000 do host é deste próprio frontend em `pnpm dev` --
+// apontar para ela faria a app chamar a si mesma e receber 404 em vez da API.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3200/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
