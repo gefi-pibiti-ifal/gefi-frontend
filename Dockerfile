@@ -94,7 +94,27 @@ COPY . .
 # da CSP.
 ARG NEXT_PUBLIC_API_URL=/api
 
+# Client ID do Google. Precisa entrar AQUI, e nao como env de runtime: o botao
+# de login e montado no navegador, e o valor so chega ao cliente se estiver
+# congelado no bundle. Definido apenas no `environment` do compose, ele existe
+# no container mas nunca no JavaScript entregue a pagina -- o sintoma e o botao
+# nao renderizar, com "NEXT_PUBLIC_GOOGLE_CLIENT_ID nao esta definida".
+#
+# Nao e segredo (ver o comentario acima sobre NEXT_PUBLIC_*): um Client ID e
+# publico por natureza, e o Client Secret nao participa deste fluxo.
+#
+# Efeito colateral aceito: a imagem passa a ser especifica do projeto Google.
+# Na pratica um unico OAuth Client atende local, dev e stage, bastando cadastrar
+# todas as origens nele -- entao segue valendo uma imagem para todos.
+ARG NEXT_PUBLIC_GOOGLE_CLIENT_ID=""
+
+# Dominio sugerido no seletor de contas. Vazio => sem filtro (o caso do IFAL,
+# que tem ifal.edu.br e aluno.ifal.edu.br).
+ARG NEXT_PUBLIC_GOOGLE_HD=""
+
 ENV NEXT_PUBLIC_API_URL=$NEXT_PUBLIC_API_URL
+ENV NEXT_PUBLIC_GOOGLE_CLIENT_ID=$NEXT_PUBLIC_GOOGLE_CLIENT_ID
+ENV NEXT_PUBLIC_GOOGLE_HD=$NEXT_PUBLIC_GOOGLE_HD
 
 # `pnpm build` = next build -> .next/standalone + .next/static
 RUN pnpm build

@@ -23,17 +23,32 @@ import type { NextConfig } from 'next';
  * a origem do backend precisa entrar aqui, senao o navegador bloqueia as
  * chamadas.
  */
+/**
+ * Origens do Google Identity Services (GIS), usadas pelo botao de login.
+ *
+ * Sem estas entradas o login falha de um jeito particularmente ingrato: a CSP
+ * bloqueia o script e o iframe SEM erro visivel na interface -- o botao
+ * simplesmente nao aparece. Se for preciso depurar, o motivo real esta no
+ * console do navegador, nao na aba Network.
+ */
+const GOOGLE_GSI = 'https://accounts.google.com/gsi/';
+const GOOGLE_AVATARES = 'https://lh3.googleusercontent.com';
+
 const CSP = [
   "default-src 'self'",
   "base-uri 'self'",
   "form-action 'self'",
   "frame-ancestors 'none'",
   "object-src 'none'",
-  "script-src 'self' 'unsafe-inline'",
-  "style-src 'self' 'unsafe-inline'",
-  "img-src 'self' data: blob:",
+  `script-src 'self' 'unsafe-inline' ${GOOGLE_GSI}client`,
+  `style-src 'self' 'unsafe-inline' ${GOOGLE_GSI}style`,
+  // O GIS renderiza o botao e o One Tap dentro de um iframe proprio.
+  `frame-src ${GOOGLE_GSI}`,
+  // A foto do perfil vem do CDN de avatares, nao do dominio do GIS.
+  `img-src 'self' data: blob: ${GOOGLE_AVATARES}`,
   "font-src 'self' data:",
-  "connect-src 'self'",
+  // 'self' cobre o proxy same-origin /api; o GIS faz chamadas proprias.
+  `connect-src 'self' ${GOOGLE_GSI}`,
   "worker-src 'self' blob:",
   'upgrade-insecure-requests',
 ].join('; ');

@@ -7,8 +7,8 @@
 #
 #   web-dev    profile `deploy-dev`. Sobe o artefato do ambiente de dev.
 #
-#   docker compose up --build            -> http://localhost:3000
-#   docker compose up --build web-dev    -> http://localhost:3001
+#   docker compose up --build            -> http://localhost:3100
+#   docker compose up --build web-dev    -> http://localhost:3101
 #
 # Para o deploy-dev, NOMEIE o servico em vez de usar `--profile deploy-dev`:
 # nomear um servico ja ativa o profile dele e sobe apenas ele, enquanto a flag
@@ -94,11 +94,21 @@ services:
         # ainda obrigaria a afrouxar o `connect-src` da CSP.
         NEXT_PUBLIC_API_URL: /api
 
+        # Precisa ser build ARG, nao `environment`: variaveis NEXT_PUBLIC_* sao
+        # congeladas no bundle durante o `next build`. Como env de runtime, o
+        # valor existe no container mas nunca chega ao navegador, e o botao do
+        # Google nao renderiza.
+        #
+        # `:?` para falhar no BUILD, com mensagem clara, em vez de gerar uma
+        # imagem que so revela o problema na tela de login.
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:?defina NEXT_PUBLIC_GOOGLE_CLIENT_ID no .env}
+        NEXT_PUBLIC_GOOGLE_HD: ${NEXT_PUBLIC_GOOGLE_HD:-}
+
     image: gefi-docs-frontend:local
 
     ports:
-      # 3100 e nao 3000: o gefi-backend ja publica "127.0.0.1:3000:3000" no host,
-      # e as duas portas colidiriam.
+      # 3100 e nao 3000: a 3000 do host fica reservada para `pnpm dev` deste
+      # mesmo frontend. (O gefi-backend publica em 127.0.0.1:3200.)
       # Publicado so no loopback: sem o 127.0.0.1, o Docker abre a porta em todas
       # as interfaces e ainda fura a regra equivalente do firewall.
       - "127.0.0.1:3100:3000"
@@ -127,6 +137,10 @@ services:
       dockerfile: Dockerfile
       args:
         NEXT_PUBLIC_API_URL: /api
+        # Ver o comentario no servico `web`: NEXT_PUBLIC_* so chega ao navegador
+        # se entrar no build.
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:?defina NEXT_PUBLIC_GOOGLE_CLIENT_ID no .env}
+        NEXT_PUBLIC_GOOGLE_HD: ${NEXT_PUBLIC_GOOGLE_HD:-}
 
     image: gefi-docs-frontend:dev
 
@@ -155,14 +169,15 @@ networks:
   # container -- `http://gefi-api:3000` -- direto pela rede do Docker.
   #
   # Isso e melhor que passar pelo host: o backend publica em
-  # "127.0.0.1:3000:3000", ou seja, so no loopback do host, e um container NAO
+  # "127.0.0.1:3200:3000", ou seja, so no loopback do host, e um container NAO
   # alcanca de forma confiavel um servico preso ao loopback via
   # host.docker.internal. Pela rede interna nem e preciso publicar porta alguma.
   #
   # `external: true` => o compose NAO cria a rede: suba o backend primeiro
   #   cd ../gefi-backend && docker compose up -d
   # Se o backend rodar FORA do Docker, remova esta rede dos servicos acima e
-  # use DOCKER_API_UPSTREAM=http://host.docker.internal:3000.
+  # use DOCKER_API_UPSTREAM=http://host.docker.internal:3200 (3200 e a porta
+  # publicada no host; 3000 e a porta INTERNA, valida so dentro da rede).
   backend:
     external: true
     name: gefi-backend_default

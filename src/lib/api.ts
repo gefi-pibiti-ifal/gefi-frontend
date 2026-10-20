@@ -5,36 +5,35 @@
 
 import axios, { AxiosError, AxiosInstance } from 'axios';
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3000/api';
+// Fallback usado só quando NEXT_PUBLIC_API_URL não é definida no build.
+// 3200, e não 3000: a 3000 do host é deste próprio frontend em `pnpm dev` --
+// apontar para ela faria a app chamar a si mesma e receber 404 em vez da API.
+const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3200/api';
 
 const api: AxiosInstance = axios.create({
   baseURL: API_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  /**
+   * A sessão é um cookie httpOnly, não um token em memória: sem isto o axios
+   * não o envia e toda requisição autenticada responde 401.
+   *
+   * Não existe mais interceptor de request montando `Authorization`. O token
+   * é inacessível ao JavaScript de propósito — é justamente o que impede que
+   * um script injetado na página roube a sessão.
+   */
+  withCredentials: true,
 });
 
-// Interceptor: Adicionar token JWT em todas as requisições
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('auth_token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
-
-// Interceptor: Tratar erros de autenticação (401)
+// Interceptor: tratar sessão expirada ou revogada (401)
 api.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
-    if (error.response?.status === 401) {
-      // Token expirado ou inválido
-      if (typeof window !== 'undefined') {
-        localStorage.removeItem('auth_token');
-        localStorage.removeItem('user');
-        // Redirecionar para login
+    if (error.response?.status === 401 && typeof window !== 'undefined') {
+      // Nada a limpar no cliente: quem invalida o cookie é o servidor. Só não
+      // redirecione quem já está no login, para não criar laço de navegação.
+      if (!window.location.pathname.startsWith('/login')) {
         window.location.href = '/login';
       }
     }

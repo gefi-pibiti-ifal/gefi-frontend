@@ -89,3 +89,7 @@ Desktop.ini
 .cache/
 .eslintcache
 .stylelintcache
+
+# Claude Code: settings.local.json guarda caminhos absolutos da maquina
+# (ex.: acesso ao repositorio do backend ao lado). Nao versionar.
+.claude/settings.local.json

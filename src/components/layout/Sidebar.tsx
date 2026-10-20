@@ -2,9 +2,9 @@
 
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { 
-  MessageCircle, FileText, Calendar, History, LogOut, 
-  MessageSquare, Loader2, MoreVertical, Pin, Edit2, Trash2 
+import {
+  MessageCircle, FileText, Calendar, History, LogOut,
+  MessageSquare, Loader2, MoreVertical, Pin, Edit2, Trash2, Users
 } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useState, useEffect, useRef, useCallback } from 'react';
@@ -20,12 +20,15 @@ const menuItems = [
   { name: 'Cronograma', href: '/dashboard/schedule', icon: Calendar },
   { name: 'Histórico', href: '/dashboard/history', icon: History },
   { name: 'Novo Chat (IA)', href: '/dashboard', icon: MessageCircle },
+  // Só aparece para administradores. Esconder é conveniência de interface --
+  // a rota responde 403 para qualquer outro perfil de qualquer forma.
+  { name: 'Usuários', href: '/dashboard/users', icon: Users, adminOnly: true },
 ];
 
 export function Sidebar() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, logout } = useAuth();
+  const { user, logout, isAdmin } = useAuth();
   
   const [conversations, setConversations] = useState<Conversation[]>([]);
   // A página corrente só é lida dentro do próprio updater (setPage(prev => ...)).
@@ -145,6 +148,8 @@ export function Sidebar() {
 
         <nav className="px-4 pt-6 pb-2 space-y-2 shrink-0">
           {menuItems.map((item) => {
+            if (item.adminOnly && !isAdmin) return null;
+
             const Icon = item.icon;
             const isActive = item.href === '/dashboard' ? pathname === '/dashboard' : pathname.startsWith(item.href);
             return (
@@ -248,12 +253,28 @@ export function Sidebar() {
         {/* Footer (Logout) Preservado */}
         <div className="p-4 border-t border-white/10 shrink-0 mt-auto">
           {user && (
-            <div className="px-4 py-3 bg-white/5 rounded-lg mb-4">
-              <p className="text-[10px] text-white/50 uppercase">Usuário</p>
-              <p className="text-xs font-medium truncate">{user.full_name || user.email}</p>
+            <div className="flex items-center gap-3 px-4 py-3 bg-white/5 rounded-lg mb-4">
+              {user.picture_url && (
+                // Avatar externo do Google. Passar pelo otimizador do Next
+                // exigiria liberar o host em images.remotePatterns, sem ganho
+                // real para uma miniatura de 32px.
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={user.picture_url}
+                  alt=""
+                  referrerPolicy="no-referrer"
+                  className="w-8 h-8 rounded-full shrink-0"
+                />
+              )}
+              <div className="min-w-0">
+                <p className="text-[10px] text-white/50 uppercase">
+                  {isAdmin ? 'Administrador' : 'Fiscal'}
+                </p>
+                <p className="text-xs font-medium truncate">{user.full_name || user.email}</p>
+              </div>
             </div>
           )}
-          <button onClick={() => logout()} className="w-full flex items-center gap-2 px-4 py-3 rounded-lg text-white hover:bg-white/10 transition-colors text-sm">
+          <button onClick={() => void logout()} className="w-full flex items-center gap-2 px-4 py-3 rounded-lg text-white hover:bg-white/10 transition-colors text-sm">
             <LogOut size={18} /> Sair
           </button>
         </div>

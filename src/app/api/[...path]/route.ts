@@ -47,6 +47,33 @@ function filterHeaders(source: Headers): Headers {
 }
 
 /**
+ * Repassa a resposta do backend preservando os `Set-Cookie`.
+ *
+ * `filterHeaders` sozinho NAO serve para a resposta: `Headers.forEach` entrega
+ * cada `set-cookie` separadamente, mas `out.set()` sobrescreve o anterior --
+ * entao, de dois cookies, so o ultimo chegaria ao navegador. Como a sessao do
+ * GeFi agora e um cookie httpOnly emitido pelo backend, perder esse header
+ * significa um login que responde 200 e mesmo assim nao autentica.
+ *
+ * `getSetCookie()` devolve a lista real, e `append` preserva as repeticoes.
+ */
+function filterResponseHeaders(source: Headers): Headers {
+  const out = new Headers();
+
+  source.forEach((value, key) => {
+    const nome = key.toLowerCase();
+    if (nome === 'set-cookie') return; // tratado abaixo, sem colapsar
+    if (!HOP_BY_HOP.has(nome)) out.set(key, value);
+  });
+
+  for (const cookie of source.getSetCookie()) {
+    out.append('set-cookie', cookie);
+  }
+
+  return out;
+}
+
+/**
  * Monta a URL de destino de forma que o CLIENTE NAO CONSIGA TROCAR O HOST.
  *
  * Os segmentos vem da URL e sao dados nao confiaveis: sem cuidado, um
@@ -127,7 +154,7 @@ async function handler(
     return new Response(upstreamResponse.body, {
       status: upstreamResponse.status,
       statusText: upstreamResponse.statusText,
-      headers: filterHeaders(upstreamResponse.headers),
+      headers: filterResponseHeaders(upstreamResponse.headers),
     });
   } catch (error) {
     // O detalhe fica no LOG do servidor (host/porta internos sao uteis para
