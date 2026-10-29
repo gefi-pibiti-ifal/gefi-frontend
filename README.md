@@ -498,7 +498,7 @@ Para dúvidas ou problemas, consulte:
 
 ## 📄 Licença
 
-MIT
+Este projeto é licenciado sob a **GNU General Public License v3.0 ou posterior** (GPL-3.0-or-later). Veja o arquivo [LICENSE](LICENSE) para o texto completo.
 
 ## 👥 Autores
 

@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Frontend para o sistema GeFi Docs (Gestão e Fiscalização Inteligente)",
   "private": true,
+  "license": "GPL-3.0-or-later",
   "packageManager": "pnpm@11.17.0",
   "engines": {
     "node": ">=22.12.0",
