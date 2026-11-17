@@ -1,0 +1,61 @@
+# ==============================================================================
+# Deploy do frontend (Next.js + Caddy) no servidor do IFAL.
+#
+# Roda no "self-hosted runner" instalado no proprio servidor (label
+# `gefi-server`) -- o GitHub nunca precisa acessar o servidor por SSH.
+#
+# QUANDO RODA:
+#   - a cada push na branch main
+#   - manualmente, em GitHub > Actions > "Deploy frontend" > Run workflow
+# ==============================================================================
+name: Deploy frontend
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-frontend
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    runs-on: [self-hosted, gefi-server]
+    timeout-minutes: 30
+
+    env:
+      ENV_FILE: /opt/gefi/frontend.env
+      COMPOSE_FILE: deploy/docker-compose.deploy.yml
+
+    steps:
+      - name: Baixar o codigo
+        uses: actions/checkout@v5
+
+      - name: Conferir pre-requisitos
+        run: |
+          if [ ! -f "$ENV_FILE" ]; then
+            echo "::error::Arquivo $ENV_FILE nao existe no servidor. Crie-o a partir de deploy/frontend.env.example."
+            exit 1
+          fi
+          if ! docker network inspect gefi-backend_default >/dev/null 2>&1; then
+            echo "::error::Rede gefi-backend_default nao existe: faca o deploy do backend primeiro."
+            exit 1
+          fi
+
+      - name: Build e subida (Next + Caddy)
+        # --wait: so termina quando o site responder no healthcheck.
+        run: |
+          docker compose --env-file "$ENV_FILE" up -d --build --remove-orphans \
+            --wait --wait-timeout 300
+
+      - name: Mostrar logs se falhar
+        if: failure()
+        run: docker compose --env-file "$ENV_FILE" logs --tail 200 || true
+
+      - name: Limpeza de imagens antigas
+        if: always()
+        run: docker image prune -f

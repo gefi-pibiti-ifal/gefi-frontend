@@ -1,0 +1,100 @@
+# ==============================================================================
+# gefi-docs-frontend — DEPLOY NO SERVIDOR (producao)
+#
+# Sobe dois containers:
+#   web    o Next.js (mesmo Dockerfile do docker-compose.yml da raiz)
+#   caddy  porta de entrada da internet (80/443). Faz HTTPS automatico
+#          (Let's Encrypt) quando SITE_ADDRESS for um dominio.
+#
+#   Internet -> caddy:443 -> web:3000 -> (proxy /api) -> gefi-api-deploy:3000
+#
+# Nenhuma porta do Next nem da API fica exposta: so o Caddy publica portas.
+#
+# Usado pelo workflow .github/workflows/deploy.yml. Para rodar na mao, no
+# servidor, a partir da RAIZ do repositorio:
+#   docker compose -f deploy/docker-compose.deploy.yml --env-file /opt/gefi/frontend.env up -d --build
+#
+# Pre-requisito: o backend ja estar no ar (ele cria a rede gefi-backend_default).
+# ==============================================================================
+
+name: gefi-web
+
+services:
+  web:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: /api
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: ${NEXT_PUBLIC_GOOGLE_CLIENT_ID:?defina NEXT_PUBLIC_GOOGLE_CLIENT_ID no frontend.env}
+        NEXT_PUBLIC_GOOGLE_HD: ${NEXT_PUBLIC_GOOGLE_HD:-}
+    image: gefi-docs-frontend:prod
+    container_name: gefi-web
+
+    environment:
+      # Nome do container da API de deploy (servico api-deploy do gefi-backend),
+      # na porta INTERNA 3000.
+      API_UPSTREAM: ${DOCKER_API_UPSTREAM:-http://gefi-api-deploy:3000}
+
+    networks: [default, backend]
+
+    # Mesmo endurecimento do docker-compose.yml da raiz.
+    read_only: true
+    security_opt:
+      - no-new-privileges:true
+    cap_drop:
+      - ALL
+    tmpfs:
+      - /tmp:uid=65532,gid=65532,mode=1777
+    mem_limit: 512m
+    pids_limit: 256
+    healthcheck:
+      test:
+        - CMD
+        - /nodejs/bin/node
+        - -e
+        - "fetch('http://127.0.0.1:3000/healthz').then(r=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"
+      interval: 10s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    restart: unless-stopped
+    logging: &logging
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  caddy:
+    image: caddy:2
+    container_name: gefi-caddy
+    environment:
+      # ":80"            -> sem dominio: HTTP puro, acesso por http://IP
+      # "gefi.ifal.edu.br" -> HTTPS automatico (portas 80 e 443 abertas na internet)
+      SITE_ADDRESS: ${SITE_ADDRESS:-:80}
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # HTTP/3
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data # certificados HTTPS (NAO apague)
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+    security_opt:
+      - no-new-privileges:true
+    restart: unless-stopped
+    logging: *logging
+
+networks:
+  default:
+  # Rede criada pelo compose do gefi-backend (projeto fixo `gefi-backend`).
+  backend:
+    external: true
+    name: gefi-backend_default
+
+volumes:
+  caddy_data:
+  caddy_config:
