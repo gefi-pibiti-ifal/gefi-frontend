@@ -1,0 +1,15 @@
+# Caddy: porta de entrada do GeFi na internet.
+#
+# SITE_ADDRESS vem do /opt/gefi/frontend.env (via docker compose):
+#   :80                 -> sem dominio, HTTP puro (so para teste)
+#   gefi.ifal.edu.br    -> HTTPS automatico com Let's Encrypt
+{$SITE_ADDRESS} {
+	encode zstd gzip
+
+	# Uploads de documentos: limite de tamanho do corpo da requisicao.
+	request_body {
+		max_size 50MB
+	}
+
+	reverse_proxy web:3000
+}
